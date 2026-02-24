@@ -11,11 +11,11 @@ const app = express()
 // }))
 
 app.use(cors({
-  origin: "https://fire-safety-dqpd.vercel.app",
+  origin: process.env.CORS_ORIGIN,
   credentials: true,
 }));
 
-app.options("*", cors());
+app.options(/.*/, cors());
 app.use(express.json({ limit: "100kb" }))
 app.use(express.urlencoded({ extended: true, limit: "100kb" }))
 app.use(express.static("public"))
