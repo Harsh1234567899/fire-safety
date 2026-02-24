@@ -43,7 +43,7 @@ app.use('/api/v7/dashboard', dasboardRouter)
 import documentRouter from './routes/document.routes.js'
 app.use('/api/v8/document', documentRouter)
 
-import fireNOCRouter from './routes/fireNoc.routes.js'
+import fireNOCRouter from './routes/fire-noc.routes.js'
 app.use('/api/v9/fire-noc', fireNOCRouter)
 
 import fireNOCTypesRouter from './routes/fireNocTypes.routes.js'
