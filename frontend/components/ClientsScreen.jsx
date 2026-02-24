@@ -1,0 +1,772 @@
+
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+    AlertCircle,
+    FileText,
+    Search,
+    Plus,
+    Trash2,
+    Edit2,
+    ArrowLeft,
+    CheckCircle2,
+    Download,
+    CreditCard,
+    Save,
+    Info,
+    Calendar,
+    File,
+    Printer,
+    Upload,
+    X,
+    FileSpreadsheet,
+    Check,
+    // Added missing icon imports
+    Phone,
+    Mail,
+    MapPin,
+    ShieldCheck,
+    Eye,
+    Copy,
+    Loader2,
+    RefreshCw
+} from 'lucide-react';
+import CertificateTemplate from './CertificateTemplate';
+import { createRoot } from 'react-dom/client';
+import { toast } from 'react-hot-toast';
+import ServiceDetailsModal from './ServiceDetailsModal.jsx';
+
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
+import apiClient from '../api/api';
+
+const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
+    const dispatch = useDispatch();
+    const { items: clients = [], loading } = useSelector(state => state.clients); // Ensure default empty array
+    const { user } = useSelector(state => state.auth);
+    const userRole = user?.role;
+    const [searchTerm, setSearchTerm] = useState('');
+    // Columns Definition
+    const allColumns = [
+        { key: 'index', label: 'Index', sortable: false },
+        { key: 'firmName', label: 'Firm Name', sortable: true },
+        { key: 'contactNumber', label: 'Phone Number', sortable: true },
+        { key: 'email', label: 'Email Address', sortable: true },
+        { key: 'gstNumber', label: 'GST Number', sortable: true },
+        { key: 'city', label: 'City', sortable: true },
+        { key: 'createdAt', label: 'Client Create Date', sortable: true },
+        { key: 'view', label: 'View', sortable: false }
+    ];
+
+    // Table State
+    const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+    const [visibleColumns, setVisibleColumns] = useState(['index', 'firmName', 'contactNumber', 'email', 'gstNumber', 'city', 'createdAt', 'view']);
+    const [showColumnMenu, setShowColumnMenu] = useState(false);
+    const columnMenuRef = useRef(null);
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Edit State
+    const [selectedClient, setSelectedClient] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [editForm, setEditForm] = useState({
+        firmName: '',
+        gstNumber: '',
+        contactPerson: '',
+        contactNumber: '',
+        email: '',
+        address: '',
+        city: '',
+        pincode: ''
+    });
+
+    // Modal State
+    const [selectedServiceId, setSelectedServiceId] = useState(null);
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+
+    const handleViewServiceDetails = (serviceId) => {
+        setSelectedServiceId(serviceId);
+        setIsServiceModalOpen(true);
+    };
+
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+    // Auto-refresh clients when screen mounts
+    useEffect(() => {
+        dispatch(fetchClients(''));
+    }, [dispatch]);
+
+    // Close column menu on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (columnMenuRef.current && !columnMenuRef.current.contains(event.target)) {
+                setShowColumnMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const toggleColumn = (key) => {
+        if (visibleColumns.includes(key)) {
+            if (visibleColumns.length > 1) { // Prevent hiding all columns
+                setVisibleColumns(visibleColumns.filter(c => c !== key));
+            }
+        } else {
+            // Maintain order based on allColumns definition
+            const newVisible = [...visibleColumns, key];
+            const sortedVisible = allColumns
+                .filter(col => newVisible.includes(col.key))
+                .map(col => col.key);
+            setVisibleColumns(sortedVisible);
+        }
+    };
+
+    const processedClients = useMemo(() => {
+        // 1. Filter
+        let filtered = clients.filter(item => {
+            const matchesSearch =
+                (item.firmName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.contactPerson || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.contactNumber || '').includes(searchTerm) ||
+                (item.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.city || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.gstNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+            return matchesSearch;
+        });
+
+        // 2. Sort
+        if (sortConfig.key) {
+            filtered.sort((a, b) => {
+                let aValue = a[sortConfig.key] || '';
+                let bValue = b[sortConfig.key] || '';
+
+                // Handle Date sorting specifically
+                if (sortConfig.key === 'createdAt') {
+                    aValue = new Date(a.createdAt || 0).getTime();
+                    bValue = new Date(b.createdAt || 0).getTime();
+                }
+                else {
+                    aValue = String(aValue).toLowerCase();
+                    bValue = String(bValue).toLowerCase();
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return filtered;
+    }, [clients, searchTerm, sortConfig]);
+
+    const RenderSortIcon = ({ columnKey }) => {
+        if (sortConfig.key !== columnKey) return <span className="text-gray-300 ml-1">⇅</span>;
+        return sortConfig.direction === 'asc' ? <span className="text-red-500 ml-1">↑</span> : <span className="text-red-500 ml-1">↓</span>;
+    };
+
+    const handleCopy = (text, label) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            toast.success(`${label} copied!`, { icon: '📋' });
+        });
+    };
+
+    const handleDeleteClient = (e, id) => {
+        e.stopPropagation();
+        // Custom toast with confirmation could go here, but keeping confirm for safety as requested "remove alert" usually implies "replace alert with toast", but confirm is functional. 
+        // We will keep confirm for now but add toast after.
+        if (window.confirm('Are you sure you want to permanently remove this firm from the directory?')) {
+            try {
+                dispatch(deleteClientLocal(id));
+                toast.success("Client removed from local view.");
+            } catch (error) {
+                toast.error("Failed to remove client.");
+            }
+        }
+    };
+
+    const handleEditClient = (e, client) => {
+        e.stopPropagation();
+        setSelectedClient(client);
+        setEditForm({
+            ...client,
+            contactNumber: client.contactNumber || client.phone || ''
+        });
+        setIsEditing(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (selectedClient) {
+            setIsSaving(true);
+            try {
+                // Calculate changed fields only
+                const changes = {};
+                Object.keys(editForm).forEach(key => {
+                    if (editForm[key] !== selectedClient[key]) {
+                        changes[key] = editForm[key];
+                    }
+                });
+
+                // Explicitly handle contactNumber / phone mapping consistency
+                // If contactNumber was edited, ensure it's sent.
+                // The editForm uses 'contactNumber' for the input.
+                if (editForm.contactNumber !== (selectedClient.contactNumber || selectedClient.phone)) {
+                    changes.contactNumber = editForm.contactNumber;
+                }
+
+                // If no changes, returns early
+                if (Object.keys(changes).length === 0) {
+                    setIsEditing(false);
+                    setIsSaving(false);
+                    return;
+                }
+
+                const updatedClient = await dispatch(updateClient({ id: selectedClient._id, data: changes })).unwrap();
+
+                // IMPORTANT: Backend update returns raw client doc (no ledger/services).
+                // We must preserve existing ledger/services from the selectedClient state.
+                const preservedClient = {
+                    ...selectedClient,
+                    ...updatedClient,
+                    ledger: selectedClient.ledger || [],
+                    services: selectedClient.services || []
+                };
+
+                setSelectedClient(preservedClient);
+                setIsEditing(false);
+            } catch (error) {
+                console.error("Failed to update client:", error);
+                alert("Failed to save changes. Please try again.");
+            } finally {
+                setIsSaving(false);
+            }
+        }
+    };
+
+    const handleCsvImport = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result;
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+
+            const newClients = [];
+            let failCount = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+
+                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+
+                if (row.firmname || row['firm name']) {
+                    const firmName = row.firmname || row['firm name'];
+                    const servicesRaw = row.services || '';
+                    const services = servicesRaw.split('|').map((s) => s.trim().toUpperCase());
+
+                    newClients.push({
+                        id: `imp-${Date.now()}-${i}`,
+                        firmName: firmName,
+                        contactPerson: row.contactname || row['contact name'] || 'Unknown',
+                        email: row.email || '',
+                        phone: row.phone || row.mobile || '',
+                        gstNumber: row.gstnumber || row.gst || '',
+                        address: row.address || '',
+                        city: row.city || '',
+                        pincode: row.pincode || '',
+                        services: services.filter(s => ['CYLINDERS', 'NOC', 'AMC'].includes(s)),
+                        status: 'SECURE',
+                        statusType: 'SECURE',
+                        initial: firmName.charAt(0).toUpperCase(),
+                        ledger: [] // Batch import creates records; ledger added via renewal/edit
+                    });
+                } else {
+                    failCount++;
+                }
+            }
+
+            if (newClients.length > 0) {
+                if (onImportClients) onImportClients(newClients); // Keep prop callback if App uses it, or just dispatch
+                dispatch(importClientsLocal(newClients));
+                setImportResults({ success: newClients.length, failed: failCount });
+            } else {
+                alert("No valid client data found in CSV. Please check the template format.");
+            }
+        };
+        reader.readAsText(file);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleExportDirectory = async () => {
+        try {
+            setIsDownloading(true); // You might need to add this state if not exists, but it seems it exists based on previous code snippets
+            const response = await apiClient.get('/v3/client/download-directory', {
+                params: { q: searchTerm },
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const date = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `Client_Directory_${date}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Export failed", error);
+            alert("Failed to export directory. Please try again.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+
+    const handleViewAllClientPDF = async (client) => {
+        if (isDownloading) return;
+        const ledgerItems = (client.ledger || []).map(item => ({
+            ...item,
+            // normalise fields the CertificateTemplate expects
+            type: item.type || 'CYLINDERS',
+            category: item.category || item.type || '',
+            serialNumbers: item.serialNumbers || item.generatedSerials || [],
+            startDate: item.startDate || '',
+            expiryDate: item.expiryDate || item.renewalDate || item.expiry || '',
+        }));
+        if (ledgerItems.length === 0) {
+            toast.error('No ledger items to generate certificate for.');
+            return;
+        }
+        setIsDownloading('ALL');
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        root.render(<CertificateTemplate client={client} ledgerItems={ledgerItems} />);
+        setTimeout(async () => {
+            const element = container.querySelector('#certificate-print-area');
+            if (element) {
+                const worker = html2pdf().set({
+                    margin: 0,
+                    filename: `Certificate_${client.firmName.replace(/\s+/g, '_')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4' }
+                }).from(element);
+                const pdfBlob = await worker.output('bloburl');
+                window.open(pdfBlob, '_blank');
+            }
+            document.body.removeChild(container);
+            setIsDownloading(null);
+        }, 1200);
+    };
+
+    if (selectedClient && isEditing) {
+        return (
+            <div className="animate-in fade-in zoom-in-95 duration-300 h-full flex flex-col">
+                <div className="mb-8 flex items-center gap-4">
+                    <button onClick={() => setIsEditing(false)} className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all"><ArrowLeft size={20} /></button>
+                    <h2 className="text-2xl font-bold">Edit Profile</h2>
+                </div>
+                <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-gray-100 flex-1 overflow-y-auto">
+                    <div className="max-w-4xl mx-auto space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">Firm Name</label><input type="text" value={editForm.firmName} onChange={e => setEditForm({ ...editForm, firmName: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none transition-all" /></div>
+                            <div><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">GST Number</label><input type="text" value={editForm.gstNumber} onChange={e => setEditForm({ ...editForm, gstNumber: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none transition-all" /></div>
+                            <div><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">Contact Person</label><input type="text" value={editForm.contactPerson} onChange={e => setEditForm({ ...editForm, contactPerson: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none transition-all" /></div>
+                            <div><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">Mobile</label><input type="text" value={editForm.contactNumber} onChange={e => setEditForm({ ...editForm, contactNumber: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none transition-all" /></div>
+                            <div className="md:col-span-2"><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">Office Address</label><textarea value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none h-24 resize-none transition-all" /></div>
+                            <div><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">City</label><input type="text" value={editForm.city} onChange={e => setEditForm({ ...editForm, city: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none transition-all" /></div>
+                            <div><label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block tracking-widest">Pincode</label><input type="text" value={editForm.pincode} onChange={e => setEditForm({ ...editForm, pincode: e.target.value })} className="w-full bg-gray-50 px-4 py-3 rounded-xl border border-transparent focus:bg-white focus:border-red-200 font-bold text-sm outline-none transition-all" /></div>
+                        </div>
+                        <button
+                            onClick={handleSaveEdit}
+                            disabled={isSaving}
+                            className={`w-full bg-red-600 text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-red-500/20 active:scale-[0.99] transition-all tracking-widest uppercase text-sm ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        >
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (selectedClient && !isEditing) {
+        return (
+            <div className="animate-in fade-in slide-in-from-right-8 duration-500 h-full flex flex-col">
+                <div className="mb-8 flex items-center justify-between">
+                    <button onClick={() => setSelectedClient(null)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase hover:text-gray-900 transition-colors tracking-widest"><ArrowLeft size={16} />Back to Directory</button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => handleViewAllClientPDF(selectedClient)}
+                            disabled={!!isDownloading || !selectedClient.ledger?.length}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all
+                                ${isDownloading === 'ALL'
+                                    ? 'bg-gray-100 text-gray-400 cursor-wait'
+                                    : !selectedClient.ledger?.length
+                                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed border border-gray-100'
+                                        : 'bg-[#0f172a] text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20'}`}
+                        >
+                            <Printer size={14} className={isDownloading === 'ALL' ? 'animate-pulse' : ''} />
+                            {isDownloading === 'ALL' ? 'Generating...' : 'View Certificate'}
+                        </button>
+                        <button onClick={(e) => handleEditClient(e, selectedClient)} className="flex items-center gap-2 bg-white border border-gray-200 px-5 py-2.5 rounded-xl font-bold text-xs uppercase text-gray-700 hover:border-red-200 hover:bg-red-50 transition-all tracking-widest"><Edit2 size={14} />Edit Profile</button>
+                    </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-8 flex-1 overflow-hidden">
+                    <div className="w-full md:w-80 flex flex-col gap-6 overflow-y-auto shrink-0">
+                        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm text-center">
+                            <div className="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">{selectedClient.initial}</div>
+                            <h2 className="text-xl font-bold mb-1">{selectedClient.firmName}</h2>
+
+                            <div className="space-y-4 mt-8 text-left">
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><CreditCard size={14} className="text-gray-400" /><span className="text-xs font-bold text-gray-700">{selectedClient.gstNumber || 'NO GST'}</span></div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><Phone size={14} className="text-gray-400" /><span className="text-xs font-mono font-bold text-gray-700">{selectedClient.contactPerson} - {selectedClient.phone || selectedClient.contactNumber}</span></div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><Mail size={14} className="text-gray-400" /><span className="text-xs font-bold text-gray-700 truncate">{selectedClient.email}</span></div>
+                                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-2xl"><MapPin size={14} className="text-gray-400 mt-1 shrink-0" /><span className="text-xs font-bold text-gray-700 leading-relaxed">{selectedClient.address || 'Address not set'}, {selectedClient.city || ''} {selectedClient.pincode || ''}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 bg-white rounded-[2.5rem] border border-gray-100 p-10 overflow-y-auto">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-lg font-bold">Active Asset Ledger</h3>
+                            </div>
+                        </div>
+                        <div className="space-y-6">
+                            {selectedClient.ledger?.length > 0 ? selectedClient.ledger.map((item, idx) => (
+                                <div
+                                    key={idx}
+                                    onClick={() => handleViewServiceDetails(item._id || item.id)}
+                                    className="p-6 bg-gray-50 rounded-3xl border border-transparent hover:border-blue-100 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                                >
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'CYLINDERS' ? 'bg-orange-50 text-orange-500' :
+                                                item.type === 'NOC' ? 'bg-blue-50 text-blue-500' : 'bg-purple-50 text-purple-500'
+                                                }`}>
+                                                <ShieldCheck size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold">{item.category || item.type} Provision</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="py-20 text-center text-gray-300 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-gray-50 rounded-3xl">No historical provisions mapped</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <ServiceDetailsModal
+                    isOpen={isServiceModalOpen}
+                    onClose={() => setIsServiceModalOpen(false)}
+                    serviceId={selectedServiceId}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
+            {/* Header Section */}
+            {/* Header Section */}
+            <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-1">Firm Directory</h1>
+                    <p className="text-gray-500 italic">Centralized registry of all registered corporate safety partners.</p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                    {userRole === 'ADMIN' && (
+                        <button
+                            onClick={() => setIsImportModalOpen(true)}
+                            className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm"
+                        >
+                            <Upload size={16} className="text-red-500" /> Import
+                        </button>
+                    )}
+                    <button
+                        onClick={handleExportDirectory}
+                        className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:border-gray-300 transition-all uppercase tracking-widest shadow-sm"
+                    >
+                        <Download size={16} /> Export
+                    </button>
+                    <button
+                        onClick={() => dispatch(fetchClients(''))}
+                        className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm"
+                    >
+                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
+                    </button>
+                    <button
+                        onClick={onRegisterNew}
+                        className="flex items-center gap-2 bg-[#ef4444] text-white px-5 py-2.5 rounded-full font-bold text-xs shadow-lg shadow-red-500/20 active:scale-95 transition-all uppercase tracking-widest"
+                    >
+                        <Plus size={16} /> Register Firm
+                    </button>
+                </div>
+            </div>
+
+            {/* Filter & Control Bar */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-4">
+                <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1.5 flex items-center group focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 transition-all hover:border-red-500/50">
+                    <Search className="text-gray-400 ml-3 shrink-0 transition-colors pointer-events-none group-focus-within:text-red-500" size={18} />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search by Firm Name, ID, or Contact..."
+                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium text-gray-700 h-10 w-full placeholder:text-gray-400"
+                    />
+                </div>
+
+                {/* Column Manager */}
+                <div className="relative" ref={columnMenuRef}>
+                    <button
+                        onClick={() => setShowColumnMenu(!showColumnMenu)}
+                        className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 uppercase tracking-wide transition-all w-full md:w-auto"
+                    >
+                        <FileSpreadsheet size={16} /> Columns
+                    </button>
+
+                    {showColumnMenu && (
+                        <div className="absolute right-0 top-12 bg-white border border-gray-100 rounded-2xl shadow-xl w-60 z-50 p-4 animate-in fade-in zoom-in-95 duration-200">
+                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Visible Columns</h4>
+                            <div className="space-y-2">
+                                {allColumns.map(col => (
+                                    <label key={col.key} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${visibleColumns.includes(col.key) ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300'}`}>
+                                            {visibleColumns.includes(col.key) && <Check size={10} />}
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={visibleColumns.includes(col.key)}
+                                            onChange={() => toggleColumn(col.key)}
+                                        />
+                                        <span className={`text-xs font-bold ${visibleColumns.includes(col.key) ? 'text-gray-900' : 'text-gray-500'}`}>{col.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between">
+                                <button onClick={() => setVisibleColumns(allColumns.map(c => c.key))} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase">Show All</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Advanced Table */}
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div className="overflow-auto h-full custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                {allColumns.filter(c => visibleColumns.includes(c.key)).map((col) => (
+                                    <th
+                                        key={col.key}
+                                        onClick={() => col.sortable && handleSort(col.key)}
+                                        className={`px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-100 whitespace-nowrap ${col.sortable ? 'cursor-pointer hover:bg-gray-100 hover:text-gray-700' : ''} transition-colors`}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            {col.label}
+                                            {col.sortable && <RenderSortIcon columnKey={col.key} />}
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {processedClients.map((client, index) => (
+                                <tr key={client._id || index} className="hover:bg-red-50/20 transition-colors group">
+                                    {visibleColumns.includes('index') && (
+                                        <td className="px-4 py-3 text-xs font-bold text-gray-400">
+                                            {index + 1}
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('firmName') && (
+                                        <td className="px-4 py-3 max-w-[220px] truncate" title={client.firmName}>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-gray-900">{client.firmName}</span>
+                                                <span className="text-[10px] text-gray-400 font-medium">{client.contactPerson}</span>
+                                            </div>
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('contactNumber') && (
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2 group/copy">
+                                                <span className="text-xs font-mono font-medium text-gray-600">{client.contactNumber || client.phone}</span>
+                                                {(client.contactNumber || client.phone) && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleCopy(client.contactNumber || client.phone, 'Phone'); }}
+                                                        className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                                        title="Copy Phone"
+                                                    >
+                                                        <Copy size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('email') && (
+                                        <td className="px-4 py-3 max-w-[200px]" title={client.email}>
+                                            <div className="flex items-center gap-2 group/copy">
+                                                <span className="text-xs font-medium text-gray-600 truncate block">{client.email}</span>
+                                                {client.email && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleCopy(client.email, 'Email'); }}
+                                                        className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all shrink-0"
+                                                        title="Copy Email"
+                                                    >
+                                                        <Copy size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('gstNumber') && (
+                                        <td className="px-4 py-3">
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{client.gstNumber || '-'}</span>
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('city') && (
+                                        <td className="px-4 py-3">
+                                            <span className="inline-block px-2 py-0.5 bg-gray-100 rounded text-[10px] font-bold text-gray-500 uppercase">{client.city || 'N/A'}</span>
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('createdAt') && (
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <span className="text-xs font-bold text-gray-500">
+                                                {new Date(client.createdAt).toLocaleDateString("en-GB")}
+                                            </span>
+                                        </td>
+                                    )}
+                                    {visibleColumns.includes('view') && (
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                onClick={() => setSelectedClient(client)}
+                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-all"
+                                                title="View Details"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                            {processedClients.length === 0 && (
+                                <tr>
+                                    <td colSpan={visibleColumns.length} className="px-6 py-20 text-center text-gray-300 font-bold uppercase tracking-widest text-xs">
+                                        No Records Found
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Mass Import Modal */}
+            {isImportModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { setIsImportModalOpen(false); setImportResults(null); }}></div>
+                    <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl p-10 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Mass Client Import</h3>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Batch Registry Provisioning</p>
+                            </div>
+                            <button onClick={() => { setIsImportModalOpen(false); setImportResults(null); }} className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center"><X size={20} /></button>
+                        </div>
+
+                        {!importResults ? (
+                            <div className="space-y-6">
+                                <div className="bg-blue-50 border border-blue-100 p-6 rounded-3xl">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <Info className="text-blue-500" size={18} />
+                                        <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider">CSV Template Guide</h4>
+                                    </div>
+                                    <p className="text-[11px] text-blue-700 leading-relaxed mb-4">
+                                        Your CSV file must include a header row. Required columns are: <span className="font-bold">Firm Name, Contact Name, Phone</span>.
+                                        Optional columns: <span className="font-bold">Email, GST, Address, City, Pincode, Services</span>.
+                                    </p>
+                                    <div className="bg-white/60 p-3 rounded-xl border border-blue-200/50 font-mono text-[9px] text-blue-900">
+                                        Firm Name, Contact Name, Phone, Email, Services<br />
+                                        Apex Corp, John Smith, 9876543210, john@apex.com, CYLINDERS|NOC
+                                    </div>
+                                </div>
+
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center cursor-pointer hover:border-red-200 hover:bg-red-50/10 transition-all group"
+                                >
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleCsvImport}
+                                        accept=".csv"
+                                        className="hidden"
+                                    />
+                                    <FileSpreadsheet size={48} className="mx-auto text-gray-300 group-hover:text-red-500 mb-4 transition-colors" />
+                                    <p className="text-sm font-bold text-gray-700">Drop your CSV here or click to browse</p>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Maximum 500 records per batch</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-10">
+                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Check className="text-green-600" size={40} />
+                                </div>
+                                <h4 className="text-2xl font-bold text-gray-900 mb-2">Import Successful</h4>
+                                <div className="flex justify-center gap-8 mt-6">
+                                    <div className="text-center">
+                                        <p className="text-2xl font-black text-green-600">{importResults.success}</p>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Records Added</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-2xl font-black text-red-400">{importResults.failed}</p>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Failed Rows</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => { setIsImportModalOpen(false); setImportResults(null); }}
+                                    className="w-full mt-10 bg-[#0f172a] text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-xs"
+                                >
+                                    Back to Directory
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <ServiceDetailsModal
+                isOpen={isServiceModalOpen}
+                onClose={() => setIsServiceModalOpen(false)}
+                serviceId={selectedServiceId}
+            />
+        </div>
+    );
+};
+
+export default ClientsScreen;
