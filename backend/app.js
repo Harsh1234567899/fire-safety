@@ -10,20 +10,24 @@ const app = express()
 //   credentials: true,
 // }))
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests),
-    // requests from any localhost variation, and requests from any Vercel deployment.
-    if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Allow requests from localhost or any Vercel deployment
+    if (/^http:\/\/localhost:\d+$/.test(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
     }
+
+    // If none match, gracefully reject without a 500 error
+    return callback(null, false);
   },
   credentials: true,
-}));
+};
 
-app.options(/.*/, cors());
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json({ limit: "100kb" }))
 app.use(express.urlencoded({ extended: true, limit: "100kb" }))
 app.use(express.static("public"))
