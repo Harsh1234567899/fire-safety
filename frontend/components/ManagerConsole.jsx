@@ -3,6 +3,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, Filter, MessageCircle, AlertCircle, Clock, CheckSquare, Square, X, Loader2 } from 'lucide-react';
 import api from '../api/api.js';
 import CustomDropdown from './CustomDropdown.jsx';
+import { getAllCylinders } from '../api/fireExtinguisher.js';
+import { getAllNOCs } from '../api/fireNoc.js';
+import { getAllAMCs } from '../api/amc.js';
 
 const ManagerConsole = () => {
     const [followUpItems, setFollowUpItems] = useState([]);
@@ -18,9 +21,9 @@ const ManagerConsole = () => {
             setLoading(true);
             try {
                 const [cylindersRes, nocsRes, amcsRes] = await Promise.allSettled([
-                    api.get('/v11/fire-extinguisher/all-silinder', { params: { limit: 200 } }),
-                    api.get('/v9/fire-noc', { params: { limit: 200 } }),
-                    api.get('/v4/amc/all', { params: { limit: 200 } }),
+                    getAllCylinders({ limit: 200 }),
+                    getAllNOCs({ limit: 200 }),
+                    getAllAMCs({ limit: 200 }),
                 ]);
 
                 const now = new Date();

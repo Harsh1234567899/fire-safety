@@ -40,6 +40,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
 import apiClient from '../api/api';
+import { downloadClientDirectory } from '../api/client.js';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const dispatch = useDispatch();
@@ -340,10 +341,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const handleExportDirectory = async () => {
         try {
             setIsDownloading(true); // You might need to add this state if not exists, but it seems it exists based on previous code snippets
-            const response = await apiClient.get('/v3/client/download-directory', {
-                params: { q: searchTerm },
-                responseType: 'blob'
-            });
+            const response = await downloadClientDirectory({ q: searchTerm });
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');

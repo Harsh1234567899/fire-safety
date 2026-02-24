@@ -5,6 +5,9 @@ import { fetchClients } from '../store/slices/clientSlice';
 import apiClient from '../api/api';
 import CustomDropdown from './CustomDropdown.jsx';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
+import { downloadCylinderReport } from '../api/fireExtinguisher.js';
+import { downloadNOCReport } from '../api/fireNoc.js';
+import { downloadAMCReport } from '../api/amc.js';
 
 const ReportsScreen = () => {
     const dispatch = useDispatch();
@@ -182,10 +185,6 @@ const ReportsScreen = () => {
 
     const handleExcelExport = async () => {
         try {
-            let endpoint = '/v11/fire-extinguisher/download-report'; // Default to Cylinders
-            if (serviceFilter === 'NOC') endpoint = '/v9/fire-noc/download';
-            if (serviceFilter === 'AMC') endpoint = '/v4/amc/download';
-
             const payload = {};
             if (searchTerm) payload.firmName = searchTerm;
             if (complianceFilter !== 'All Compliance') payload.status = complianceFilter.toLowerCase();
@@ -196,12 +195,14 @@ const ReportsScreen = () => {
             if (dateRange?.from) payload.startDate = dateRange.from.toISOString().split('T')[0];
             if (dateRange?.to) payload.endDate = dateRange.to.toISOString().split('T')[0];
 
-            // Include service type/category specific filters if needed (though UI handles service filter via endpoint selection)
-            // If the user selects "Cylinders" but has a specific sub-category filter in UI (not currently visible in code snippets but beneficial to add if valid)
-
-            const response = await apiClient.post(endpoint, payload, {
-                responseType: 'blob',
-            });
+            let response;
+            if (serviceFilter === 'NOC') {
+                response = await downloadNOCReport(payload);
+            } else if (serviceFilter === 'AMC') {
+                response = await downloadAMCReport(payload);
+            } else {
+                response = await downloadCylinderReport(payload);
+            }
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
