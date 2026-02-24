@@ -11,7 +11,15 @@ const app = express()
 // }))
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests),
+    // requests from any localhost variation, and requests from any Vercel deployment.
+    if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
