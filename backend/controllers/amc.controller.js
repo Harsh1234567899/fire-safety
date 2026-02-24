@@ -610,7 +610,6 @@ const createAmc = async (req, res) => {
                 startDate,
                 endDate,
                 status,
-                visits,
                 documents: entryDocs = []
             } = e;
 
@@ -625,7 +624,6 @@ const createAmc = async (req, res) => {
                 startDate,
                 endDate,
                 status: status || undefined,
-                visits: visits || 1,
                 notes: e.notes || ''
             });
 
@@ -651,7 +649,6 @@ const createAmc = async (req, res) => {
         startDate,
         endDate,
         status,
-        visits,
         notes
     } = req.body;
 
@@ -666,7 +663,6 @@ const createAmc = async (req, res) => {
         startDate,
         endDate,
         status: status || undefined,
-        visits: visits || 1,
         notes: notes || ''
     });
 

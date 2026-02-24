@@ -137,9 +137,9 @@ const SettingsScreen = () => {
     const renderList = (items, type) => (
         <div className="space-y-4">
             {items.map((item) => (
-                <div key={item._id} className="flex items-center justify-between p-6 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors group">
-                    <div className="flex items-center gap-6">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${type === 'GAS' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>
+                <div key={item._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors group gap-4">
+                    <div className="flex items-center gap-4 sm:gap-6 w-full">
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex shrink-0 flex-none items-center justify-center ${type === 'GAS' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>
                             {type === 'GAS' ? <Scale size={24} /> : <FileText size={24} />}
                         </div>
                         <div>
@@ -152,7 +152,7 @@ const SettingsScreen = () => {
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity self-end sm:self-auto shrink-0 flex-none">
                         <button
                             onClick={() => openModal(item)}
                             className="w-10 h-10 flex items-center justify-center text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
@@ -193,9 +193,9 @@ const SettingsScreen = () => {
                 </div>
             </div>
 
-            <div className="flex gap-8 flex-1 min-h-0">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-8 flex-1 min-h-0">
                 {/* Left Tabs Sidebar */}
-                <div className="w-64 flex-shrink-0 space-y-2">
+                <div className="w-full md:w-64 flex-shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
                     <button
                         onClick={() => setActiveTab('GAS')}
                         className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${activeTab === 'GAS'
@@ -220,8 +220,8 @@ const SettingsScreen = () => {
                 </div>
 
                 {/* Content Area */}
-                <div className="flex-1 bg-white rounded-[2rem] border border-gray-100 shadow-sm p-10 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-8">
+                <div className="flex-1 bg-white rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm p-4 md:p-10 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-6 md:mb-8">
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">
                                 {activeTab === 'GAS' ? 'Gas Cylinder Types' : 'Fire NOC Categories'}

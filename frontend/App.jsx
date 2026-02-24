@@ -36,8 +36,6 @@ const App = () => {
     const { items: clients = [] } = useSelector(state => state.clients);
     const { data: dashboardData } = useSelector(state => state.dashboard);
 
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [insight, setInsight] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Initial Data Fetch - Protected
@@ -63,56 +61,14 @@ const App = () => {
         // This should ideally dispatch an action to import clients via Redux/API
     };
 
-    const handleAiAnalysis = async () => {
-        if (isAnalyzing) return;
-        setIsAnalyzing(true);
-        setInsight(null);
-        try {
-            const result = await generateDashboardInsight(dashboardData);
-            setInsight(result);
-        } catch (e) {
-            setInsight("Could not generate insight.");
-        } finally {
-            setIsAnalyzing(false);
-        }
-    };
-
     const DashboardPage = () => (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">Executive Dashboard</h1>
                     <p className="text-gray-500 italic">Safety metrics for <span className="font-semibold text-gray-800">{dashboardData?.metrics?.totalClients || 0} registered firms.</span></p>
                 </div>
-
-                <button
-                    onClick={handleAiAnalysis}
-                    className="group flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:border-green-200 transition-all cursor-pointer"
-                >
-                    <div className="relative">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isAnalyzing ? 'bg-orange-500 animate-bounce' : 'bg-green-500 group-hover:animate-pulse'}`}></div>
-                        {isAnalyzing && <div className="absolute inset-0 bg-orange-500 rounded-full animate-ping opacity-75"></div>}
-                    </div>
-                    <span className="text-xs font-bold text-gray-400 group-hover:text-green-600 transition-colors uppercase tracking-wider">
-                        {isAnalyzing ? 'Analyzing Data...' : 'Global Intelligence Active'}
-                    </span>
-                    <Sparkles size={14} className={`text-gray-300 group-hover:text-green-500 ${isAnalyzing ? 'animate-spin' : ''}`} />
-                </button>
             </div>
-
-            {insight && (
-                <div className="mb-8 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 p-6 rounded-2xl animate-in fade-in slide-in-from-top-4">
-                    <div className="flex items-start gap-4">
-                        <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
-                            <Sparkles size={20} />
-                        </div>
-                        <div>
-                            <h4 className="text-sm font-bold text-indigo-900 uppercase tracking-wide mb-2">AI Executive Summary</h4>
-                            <p className="text-gray-700 leading-relaxed text-sm">{insight}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <StatCard
@@ -292,26 +248,18 @@ const App = () => {
             />
 
             <main className="flex-1 ml-0 md:ml-64 flex flex-col h-screen overflow-hidden relative transition-all duration-300">
-                {/* Mobile Header Toggle */}
-                <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-gray-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                        </button>
-                        <span className="font-bold text-gray-900">Sahaj Group</span>
-                    </div>
-                    <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                        {currentUser.name.charAt(0)}
-                    </div>
-                </div>
-
-                <div className="hidden md:block">
-                    <Header
-                        clients={clients}
-                        onNavigateToClient={() => navigate('/clients')}
-                        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                    />
-                </div>
+                <Header
+                    clients={clients}
+                    onNavigateToClient={(client) => {
+                        if (client.id === 'all') {
+                            navigate('/clients');
+                        } else {
+                            navigate('/clients', { state: { selectedClient: client } });
+                        }
+                    }}
+                    toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    currentUser={currentUser}
+                />
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-6">
                     <Routes>

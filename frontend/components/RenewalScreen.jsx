@@ -147,7 +147,6 @@ const RenewalScreen = ({ onBack }) => {
                 mobile: item.mobile || '',
                 startDate: toDateInput(item.startDate),
                 expiry: toDateInput(item.endDate),
-                visits: item.visits || 4,
                 renewalNotes: item.notes || '',
                 attachedFiles: (item.documents || []).map(d => ({
                     _id: d._id?.toString(),
@@ -226,7 +225,6 @@ const RenewalScreen = ({ onBack }) => {
             mobile: '',
             startDate: new Date().toISOString().slice(0, 10),
             expiry: '',
-            visits: 4,
             renewalNotes: '',
             attachedFiles: [],
             lastExpiry: null,
@@ -328,23 +326,45 @@ const RenewalScreen = ({ onBack }) => {
         if (invalid) { toast.error('Each cylinder needs Gas Category, Service Date and Renewal Date.'); return; }
         setSavingSection('CYLINDERS');
         try {
-            await Promise.all(cylinders.map(c => {
+            const results = await Promise.all(cylinders.map(async (c) => {
                 const catObj = gasCategories.find(g => g.name === c.gasCategory);
                 const serials = c.generatedSerials || c.selectedSerials || [];
+
+                // Only take the selected serial count for the new refilled quantity, unless none are selected
+                const resolvedQuantity = (serials.length > 0 && !c.isNew) ? serials.length : c.qty;
+
                 const payload = {
                     clientId: client._id,
                     serviceType: c.serviceType || 'refilling',
                     refillingType: c.refillingType || 'existing',
                     category: catObj?._id,
                     kgLtr: c.kgLtr,
-                    quantity: c.qty,
+                    quantity: resolvedQuantity,
                     startDate: c.startDate,
                     endDate: c.renewalDate,
                     notes: c.renewalNotes,
                     serialNumber: serials,
                 };
-                return c.isNew ? createCylinder(payload) : updateCylinder(c.id, payload);
+
+                // If it is a historical cylinder being refilled, we CREATE a new entry to preserve history.
+                if (c.isNew || c.serviceType === 'refilling') {
+                    const res = await createCylinder(payload);
+                    return { oldId: c.id, newId: res.data?.data?._id, data: res.data };
+                } else {
+                    const res = await updateCylinder(c.id, payload);
+                    return { oldId: c.id, newId: c.id, data: res.data };
+                }
             }));
+
+            // Update state so subsequent saves of this view update the newly created records instead of creating more
+            setCylinders(prev => prev.map(c => {
+                const match = results.find(r => r.oldId === c.id);
+                if (match && match.newId) {
+                    return { ...c, id: match.newId, isNew: false };
+                }
+                return c;
+            }));
+
             setCylindersSaved(true);
             toast.success('Cylinders saved!');
         } catch (e) {
@@ -403,7 +423,6 @@ const RenewalScreen = ({ onBack }) => {
                     mobile: a.mobile || '',
                     startDate: a.startDate,
                     endDate: a.expiry,
-                    visits: a.visits || 4,
                     notes: a.renewalNotes || '',
                     documents: (a.attachedFiles || []).map(file => typeof file === 'string' ? file : file._id).filter(Boolean),
                 };
@@ -429,11 +448,16 @@ const RenewalScreen = ({ onBack }) => {
         if (isDownloading) return;
         setIsDownloading(true);
         const ledgerItems = [
-            ...cylinders.filter(c => c.gasCategory).map(c => ({
-                _id: c.id, type: 'CYLINDERS', category: c.gasCategory,
-                serialNumbers: c.generatedSerials || c.selectedSerials || [],
-                startDate: c.startDate, endDate: c.renewalDate, notes: c.renewalNotes,
-            })),
+            ...cylinders.filter(c => c.gasCategory).map(c => {
+                const serials = c.generatedSerials || c.selectedSerials || [];
+                const resolvedQuantity = (serials.length > 0 && !c.isNew) ? serials.length : c.qty;
+                return {
+                    _id: c.id, type: 'CYLINDERS', category: c.gasCategory,
+                    serialNumbers: serials,
+                    quantity: resolvedQuantity,
+                    startDate: c.startDate, endDate: c.renewalDate, notes: c.renewalNotes,
+                };
+            }),
             ...nocs.filter(n => n.type).map(n => ({
                 _id: n.id, type: 'NOC', category: n.type,
                 serialNumbers: [],
@@ -1013,11 +1037,7 @@ const RenewalScreen = ({ onBack }) => {
                                                 <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Technician Visits</label>
-                                            <input type="number" min="1" value={item.visits} onChange={e => updateItem(item.id, 'AMC', 'visits', e.target.value)}
-                                                className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" placeholder="4" />
-                                        </div>
+
                                     </div>
                                     {/* Document upload */}
                                     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">

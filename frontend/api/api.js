@@ -18,7 +18,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const response = await apiClient.post("/v1/auth/refresh-token");
+        const response = await apiClient.post("/api/v1/auth/refresh-token");
         const { accessToken } = response.data.data;
 
         // If your app uses localStorage for something, update it here.

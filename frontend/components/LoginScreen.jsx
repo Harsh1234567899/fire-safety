@@ -61,7 +61,7 @@ const LoginScreen = () => {
                         <div className="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center shadow-xl shadow-red-900/20 mb-6 transform rotate-3 hover:rotate-0 transition-transform">
                             <ShieldCheck size={40} className="text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tighter">Sahaj Group</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tighter">{import.meta.env.VITE_APP_COMPANY_SHORT_NAME || 'Control Panel'}</h1>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Liaison Management System</p>
                     </div>
 
@@ -133,7 +133,7 @@ const LoginScreen = () => {
                     <div className="mt-12 text-center">
                         <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.1em]">
                             Authorized Internal Access Only<br />
-                            Sahaj Group of Services © {new Date().getFullYear()}
+                            {import.meta.env.VITE_APP_COMPANY_NAME || 'Company Name'} © {new Date().getFullYear()}
                         </p>
                     </div>
                 </div>

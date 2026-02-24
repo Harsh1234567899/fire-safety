@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { BarChart3, Download, FileText, Search, Calendar, Box, ExternalLink, X, RefreshCw } from 'lucide-react';
+import { BarChart3, Download, FileText, Search, Calendar, Box, ExternalLink, X, RefreshCw, ShieldCheck, AlertCircle, Filter } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchClients } from '../store/slices/clientSlice';
 import apiClient from '../api/api';
@@ -8,13 +8,25 @@ import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 
 const ReportsScreen = () => {
     const dispatch = useDispatch();
-    const { items: clients, loading } = useSelector(state => state.clients);
+    const { items: clients, loading, pagination } = useSelector(state => state.clients);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageLimit, setPageLimit] = useState(25);
+    const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-    // Auto-refresh clients when screen mounts
+    // Auto-refresh clients when screen mounts or pagination changes
     React.useEffect(() => {
-        dispatch(fetchClients(''));
-    }, [dispatch]);
+        dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit }));
+    }, [dispatch, currentPage, pageLimit]);
+
+    // Handle initial search trigger (debounce)
+    React.useEffect(() => {
+        setCurrentPage(1);
+        const delayDebounceFn = setTimeout(() => {
+            dispatch(fetchClients({ query: searchTerm, page: 1, limit: pageLimit }));
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, dispatch, pageLimit]);
 
     // Transform clients data into flat report items
     const reportItems = useMemo(() => {
@@ -218,17 +230,43 @@ const ReportsScreen = () => {
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col relative">
             {/* Header Section */}
-            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-0">
+            <div className="mb-8 flex justify-between items-start gap-4">
                 <div>
                     <div className="flex items-center gap-2 mb-2">
                         <BarChart3 size={14} className="text-red-500" />
                         <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Reports & Analytics</span>
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">Client Service Ledger</h1>
-                    <p className="text-gray-500">Granular service-level reporting and compliance tracking.</p>
+                    <p className="text-gray-500 text-sm">Granular service-level reporting and compliance tracking.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full md:w-auto">
-                    <div className="flex flex-col gap-1 w-full sm:w-auto">
+                {/* Mobile & Tablet Toggle */}
+                <button
+                    onClick={() => setShowMobileFilters(!showMobileFilters)}
+                    className="lg:hidden flex items-center justify-center gap-2 bg-white border border-gray-200 px-4 py-2.5 rounded-xl font-bold text-xs text-gray-700 shadow-sm hover:bg-gray-50 shrink-0"
+                >
+                    <Filter size={16} className={showMobileFilters ? "text-red-500" : "text-gray-400"} />
+                    <span className="hidden sm:inline">{showMobileFilters ? "Close Filters" : "Filters & Actions"}</span>
+                </button>
+            </div>
+
+            {/* Persistent Mobile Search Bar */}
+            <div className="mb-4 lg:hidden">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 flex items-center transition-all focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 hover:border-red-500/50">
+                    <Search className="shrink-0 ml-3 text-gray-300 transition-colors pointer-events-none group-focus-within:text-red-500" size={20} />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Filter by Firm, Contact, or Service Name..."
+                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium text-gray-700 placeholder:text-gray-300 h-10 w-full"
+                    />
+                </div>
+            </div>
+
+            {/* Collapsible Filters & Actions */}
+            <div className={`flex-col gap-6 mb-8 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
+                <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between w-full">
+                    <div className="flex flex-col gap-1 w-full md:w-auto">
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <div className="bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm flex flex-col justify-center min-w-[140px] relative">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Start Date</label>
@@ -270,10 +308,10 @@ const ReportsScreen = () => {
                         )}
                     </div>
 
-                    <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
                         <button
                             onClick={() => dispatch(fetchClients(''))}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 border px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-sm whitespace-nowrap bg-white border-gray-200 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 text-gray-700"
+                            className="flex items-center justify-center gap-2 border px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-sm whitespace-nowrap bg-white border-gray-200 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 text-gray-700 flex-1 sm:flex-none"
                         >
                             <RefreshCw size={16} className={loading ? "animate-spin text-blue-600" : "text-gray-400"} />
                             Refresh
@@ -281,68 +319,68 @@ const ReportsScreen = () => {
                         <button
                             onClick={handleExcelExport}
                             disabled={!!dateError}
-                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 border px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-sm whitespace-nowrap ${dateError ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'}`}
+                            className={`flex items-center justify-center gap-2 border px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-sm whitespace-nowrap flex-1 sm:flex-none ${dateError ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'}`}
                         >
                             <Download size={16} className={dateError ? "text-gray-400" : "text-blue-600"} />
                             Export Excel
                         </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Filter Bar */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-8">
-                <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 flex items-center transition-all focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 hover:border-red-500/50">
-                    <Search className="shrink-0 ml-3 text-gray-300 transition-colors pointer-events-none group-focus-within:text-red-500" size={20} />
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Filter by Firm, Contact, or Service Name..."
-                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium text-gray-700 placeholder:text-gray-300 h-10 w-full"
-                    />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="w-full sm:w-auto sm:min-w-[170px]">
-                            <CustomDropdown
-                                value={complianceFilter}
-                                onChange={setComplianceFilter}
-                                options={['All Compliance', 'Active', 'Expiring Soon', 'Expired']}
-                                className="text-xs font-bold uppercase tracking-wider"
-                            />
-                        </div>
-
-                        <div className="w-full sm:w-auto sm:min-w-[170px]">
-                            <CustomDropdown
-                                value={serviceFilter}
-                                onChange={setServiceFilter}
-                                options={['All Services', 'Cylinders', 'NOC', 'AMC']}
-                                className="text-xs font-bold uppercase tracking-wider"
-                            />
-                        </div>
+                {/* Filter Bar */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+                    <div className="hidden lg:flex flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 items-center transition-all focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 hover:border-red-500/50">
+                        <Search className="shrink-0 ml-3 text-gray-300 transition-colors pointer-events-none group-focus-within:text-red-500" size={20} />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Filter by Firm, Contact, or Service Name..."
+                            className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium text-gray-700 placeholder:text-gray-300 h-10 w-full"
+                        />
                     </div>
 
-                    <button
-                        onClick={clearFilters}
-                        className="hidden sm:flex bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl w-12 items-center justify-center transition-colors"
-                        title="Clear Filters"
-                    >
-                        <X size={18} />
-                    </button>
-                    {/* Mobile Clear Button */}
-                    <button
-                        onClick={clearFilters}
-                        className="sm:hidden flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl py-3 font-bold text-xs uppercase"
-                    >
-                        <X size={14} /> Clear Filters
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="w-full sm:w-auto sm:min-w-[170px]">
+                                <CustomDropdown
+                                    value={complianceFilter}
+                                    onChange={setComplianceFilter}
+                                    options={['All Compliance', 'Active', 'Expiring Soon', 'Expired']}
+                                    className="text-xs font-bold uppercase tracking-wider"
+                                />
+                            </div>
+
+                            <div className="w-full sm:w-auto sm:min-w-[170px]">
+                                <CustomDropdown
+                                    value={serviceFilter}
+                                    onChange={setServiceFilter}
+                                    options={['All Services', 'Cylinders', 'NOC', 'AMC']}
+                                    className="text-xs font-bold uppercase tracking-wider"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={clearFilters}
+                            className="hidden sm:flex bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl w-12 items-center justify-center transition-colors"
+                            title="Clear Filters"
+                        >
+                            <X size={18} />
+                        </button>
+                        {/* Mobile Clear Button */}
+                        <button
+                            onClick={clearFilters}
+                            className="sm:hidden flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl py-3 font-bold text-xs uppercase"
+                        >
+                            <X size={14} /> Clear Filters
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex-1 overflow-hidden flex flex-col mb-12">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-visible">
                 <div className="overflow-x-auto">
                     {/* Table Header */}
                     <div className="min-w-[1000px] grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center">
@@ -416,7 +454,7 @@ const ReportsScreen = () => {
                                         ? 'bg-green-50 text-green-600 border-green-100'
                                         : 'bg-red-50 text-red-600 border-red-100'
                                         }`}>
-                                        {item.status === 'ACTIVE' ? <ShieldCheckIcon size={12} /> : <AlertCircleIcon size={12} />}
+                                        {item.status === 'ACTIVE' ? <ShieldCheck size={12} /> : <AlertCircle size={12} />}
                                         {item.status}
                                     </span>
                                 </div>
@@ -439,6 +477,50 @@ const ReportsScreen = () => {
                                 <p>No records found matching your filters.</p>
                             </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="border-t border-gray-100 bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+                        <span>
+                            Showing {((pagination?.currentPage || 1) - 1) * (pagination?.limit || 25) + 1} to {Math.min((pagination?.currentPage || 1) * (pagination?.limit || 25), pagination?.totalItems || 0)} of {pagination?.totalItems || 0}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <span>Rows per page:</span>
+                            <select
+                                value={pageLimit}
+                                onChange={(e) => {
+                                    setPageLimit(Number(e.target.value));
+                                }}
+                                className="bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-2 py-1 outline-none focus:border-red-500 cursor-pointer"
+                            >
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                                <option value={200}>200</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
+                        >
+                            Previous
+                        </button>
+                        <span className="flex items-center justify-center min-w-[32px] h-8 rounded-lg bg-red-50 text-red-600 text-xs font-bold">
+                            {currentPage} / {pagination?.totalPages || 1}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(pagination?.totalPages || 1, prev + 1))}
+                            disabled={currentPage >= (pagination?.totalPages || 1)}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>

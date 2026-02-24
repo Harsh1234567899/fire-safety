@@ -1,4 +1,4 @@
 import api from "./api.js";
 
-export const getAllUsers = () => api.get("/v2/users/all-users");
-export const logoutUser = () => api.post("/v2/users/logout");
+export const getAllUsers = () => api.get("/api/v2/users/all-users");
+export const logoutUser = () => api.post("/api/v2/users/logout");

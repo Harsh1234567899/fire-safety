@@ -7,7 +7,7 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
     const dueDate = ledgerItems[0]?.expiryDate || '';
 
     // Calculate total quantity across all items
-    const totalQty = ledgerItems.reduce((acc, item) => acc + (item.serialNumbers?.length || 0 || 1), 0);
+    const totalQty = ledgerItems.reduce((acc, curr) => acc + (curr.quantity || curr.serialNumbers?.length || 1), 0);
 
     return (
         <div id="certificate-print-area" className="bg-white p-0 m-0 w-[210mm] h-[296mm] overflow-hidden mx-auto text-gray-900 font-sans relative">
@@ -17,19 +17,17 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
                     <div className="bg-yellow-400 w-full h-10 absolute left-0 top-12 -z-10"></div>
                     <div className="bg-white p-2 border-2 border-gray-100 rounded-lg shadow-sm mb-1">
                         <ShieldCheck size={50} className="text-red-600" />
-                        <span className="block text-center font-bold text-red-600 text-xs tracking-tighter uppercase">Sahaj</span>
+                        <span className="block text-center font-bold text-red-600 text-xs tracking-tighter uppercase">{import.meta.env.VITE_APP_COMPANY_SHORT_NAME?.split(' ')[0] || 'Company'}</span>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Group</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{import.meta.env.VITE_APP_COMPANY_SHORT_NAME?.split(' ').slice(1).join(' ') || 'Name'}</span>
                 </div>
 
                 <div className="text-right max-w-sm">
-                    <h1 className="text-xl font-bold text-red-600 mb-1">SAHAJ GROUP OF SERVICES</h1>
-                    <p className="text-[10px] leading-tight text-gray-600 font-medium">
-                        Office no-313, Unity plus, near speed well<br />
-                        party plot, Ambika Township Main Road,<br />
-                        Rajkot-360005<br />
-                        Gmail: sahajgroupofservices@gmail.com<br />
-                        Phone (O): 7096780844
+                    <h1 className="text-xl font-bold text-red-600 mb-1">{import.meta.env.VITE_APP_COMPANY_NAME || 'COMPANY NAME LTD'}</h1>
+                    <p className="text-[10px] leading-tight text-gray-600 font-medium whitespace-pre-line">
+                        {import.meta.env.VITE_APP_COMPANY_ADDRESS || 'Company Address Line 1\nLine 2'}<br />
+                        Email: {import.meta.env.VITE_APP_COMPANY_EMAIL || 'email@example.com'}<br />
+                        Phone (O): {import.meta.env.VITE_APP_COMPANY_PHONE || '+1 234 567 8900'}
                     </p>
                     <div className="absolute right-0 top-12 w-2 h-16 bg-blue-700"></div>
                 </div>
@@ -70,7 +68,7 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
                 <div className="mb-8">
                     <p className="text-[11px] leading-relaxed text-gray-800 font-medium">
                         This is to certify that we have Installed/Refilling fire extinguishers for our esteemed client. These fire<br />
-                        extinguishers have been installed/refilled by SAHAJ group of services.
+                        extinguishers have been installed/refilled by {import.meta.env.VITE_APP_COMPANY_NAME || 'our company'}.
                     </p>
                 </div>
 
@@ -102,7 +100,7 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
 
                                     <span className="block text-[9px] text-gray-500 font-normal mt-0.5 italic">(FOR 1 YEAR VALIDITY)</span>
                                 </td>
-                                <td className="px-4 py-2 text-xs font-bold text-center">{(item.serialNumbers?.length || 1).toString().padStart(2, '0')}</td>
+                                <td className="px-4 py-2 text-xs font-bold text-center">{(item.quantity || item.serialNumbers?.length || 1).toString().padStart(2, '0')}</td>
                             </tr>
                         ))}
                         {/* Filler rows if needed for layout */}
@@ -136,7 +134,7 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
                     <div className="space-y-6">
                         <div className="space-y-1">
                             <p className="text-xs font-bold text-gray-800 italic">Regards,</p>
-                            <p className="text-xs font-bold text-gray-900 uppercase">SAHAJ Group of Services</p>
+                            <p className="text-xs font-bold text-gray-900 uppercase">{import.meta.env.VITE_APP_COMPANY_NAME || 'Company Name'}</p>
                         </div>
 
                         <div className="pt-8">
@@ -144,18 +142,12 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
                                 -: Our Fire and Safety Services: -
                             </h4>
                             <ul className="space-y-1">
-                                <li className="flex items-start gap-2 text-[10px] font-bold text-gray-700">
-                                    <span className="text-black">•</span>
-                                    <span>Fire Hydrant System Installation</span>
-                                </li>
-                                <li className="flex items-start gap-2 text-[10px] font-bold text-gray-700">
-                                    <span className="text-black">•</span>
-                                    <span>Fire safety products</span>
-                                </li>
-                                <li className="flex items-start gap-2 text-[10px] font-bold text-gray-700">
-                                    <span className="text-black">•</span>
-                                    <span>Fire Audit</span>
-                                </li>
+                                {(import.meta.env.VITE_APP_COMPANY_SERVICES?.split('|') || ['Fire Hydrant System Installation', 'Fire safety products', 'Fire Audit']).map((serviceStr, idx) => (
+                                    <li key={idx} className="flex items-start gap-2 text-[10px] font-bold text-gray-700">
+                                        <span className="text-black">•</span>
+                                        <span>{serviceStr}</span>
+                                    </li>
+                                ))}
                             </ul>
                         </div>
                     </div>

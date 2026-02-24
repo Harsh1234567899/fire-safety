@@ -5,18 +5,17 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { monoIdIsValid } from "../utils/mongoDBid.js";
 
 const createAmcVisit = asyncHandler(async (req, res) => {
-    const { clientId, startDate, endDate, notes } = req.body;
+    const { clientId,visitDate, notes } = req.body;
 
     // --- Basic Validation ---
-    if (!clientId || !startDate || !endDate || !notes) {
+    if (!clientId || !visitDate || !notes) {
         throw new ApiError(400, "clientId, startDate, expiryDate and remarks are required.")
     }
 
     // --- Create new AMC Visit ---
     const newVisit = await amcVisit.create({
         clientId,
-        startDate,
-        endDate,
+        visitDate,
         notes,
     });
     if (!newVisit) {
@@ -31,17 +30,16 @@ const updateAmcVisitById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     monoIdIsValid(id)
 
-    const { clientId, startDate, endDate, notes } = req.body;
+    const { clientId,visitDate, notes } = req.body;
 
     // Build payload only with provided fields
     const payload = {};
     if (clientId) payload.clientId = clientId;
-    if (startDate) payload.startDate = startDate;
-    if (endDate) payload.endDate = endDate;
+    if (visitDate) payload.visitDate = visitDate;
     if (notes) payload.notes = notes;
 
     // Update
-    const updatedVisit = await AmcVisitModel.findByIdAndUpdate(id, payload, {
+    const updatedVisit = await amcVisit.findByIdAndUpdate(id, payload, {
         new: true, // return updated document
         runValidators: true,
     });

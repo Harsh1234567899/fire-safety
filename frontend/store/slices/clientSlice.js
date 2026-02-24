@@ -3,10 +3,16 @@ import { searchClients, updateClient as apiUpdateClient } from '../../api/client
 
 export const fetchClients = createAsyncThunk(
     'clients/fetchClients',
-    async (query = '', { rejectWithValue }) => {
+    async ({ query = '', page = 1, limit = 25 } = {}, { rejectWithValue }) => {
         try {
-            const response = await searchClients(query);
-            return response.data?.data || [];
+            const response = await searchClients(query, page, limit);
+            // Assuming response.data contains { data: [...clients], total, page, limit }
+            return {
+                data: response.data?.data || [],
+                total: response.data?.total || 0,
+                page: response.data?.page || page,
+                limit: response.data?.limit || limit
+            };
         } catch (error) {
             return rejectWithValue(error.message);
         }
@@ -29,6 +35,12 @@ const initialState = {
     items: [],
     loading: false,
     error: null,
+    pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        limit: 25
+    }
 };
 
 const clientSlice = createSlice({
@@ -63,7 +75,13 @@ const clientSlice = createSlice({
             })
             .addCase(fetchClients.fulfilled, (state, action) => {
                 state.loading = false;
-                state.items = action.payload || [];
+                state.items = action.payload.data;
+                state.pagination = {
+                    currentPage: action.payload.page,
+                    totalItems: action.payload.total,
+                    limit: action.payload.limit,
+                    totalPages: Math.ceil(action.payload.total / action.payload.limit) || 1
+                };
             })
             .addCase(fetchClients.rejected, (state, action) => {
                 state.loading = false;

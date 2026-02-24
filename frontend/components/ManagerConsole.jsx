@@ -231,7 +231,7 @@ const ManagerConsole = () => {
                 <div className="flex-1 overflow-y-auto pr-2">
                     {/* List Controls */}
                     <div className="flex items-center justify-between mb-4 px-1">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center flex-wrap gap-4">
                             <button
                                 onClick={toggleSelectAll}
                                 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-gray-600 transition-colors"
@@ -246,8 +246,30 @@ const ManagerConsole = () => {
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-4 border-l border-gray-200">
                                 Target Queue ({filteredItems.length})
                             </span>
+
+                            {selectedIds.size > 0 && (
+                                <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                                    <span className="text-xs font-bold text-red-500 uppercase tracking-wider">
+                                        {selectedIds.size} Selected
+                                    </span>
+                                    <button
+                                        onClick={handleBulkWhatsApp}
+                                        className="bg-[#22c55e] hover:bg-[#16a34a] text-white px-3 py-1.5 rounded-lg flex items-center gap-2 font-bold text-[10px] tracking-wide shadow-sm transition-all"
+                                    >
+                                        <MessageCircle size={12} fill="white" />
+                                        Bulk WhatsApp
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedIds(new Set())}
+                                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                                        title="Clear Selection"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                        <span className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                        <span className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest hidden sm:inline-block">
                             Earliest First
                         </span>
                     </div>
@@ -365,35 +387,7 @@ const ManagerConsole = () => {
                 </div>
             </div>
 
-            {/* Bulk Actions Floating Bar */}
-            {selectedIds.size > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0f172a] text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-8 animate-in slide-in-from-bottom-8 duration-300 z-50 border border-slate-700">
-                    <div className="flex items-center gap-3 pr-8 border-r border-slate-700">
-                        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-bold text-sm">
-                            {selectedIds.size}
-                        </div>
-                        <span className="text-sm font-bold uppercase tracking-widest text-slate-300">Selected for Reminder</span>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleBulkWhatsApp}
-                            className="bg-[#22c55e] hover:bg-[#16a34a] text-white px-6 py-2.5 rounded-full flex items-center gap-2 font-bold text-xs tracking-wide shadow-lg shadow-green-200/20 transition-all active:scale-95"
-                        >
-                            <MessageCircle size={16} fill="white" />
-                            SEND BULK WHATSAPP
-                        </button>
-
-                        <button
-                            onClick={() => setSelectedIds(new Set())}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-xs font-bold uppercase tracking-wide text-slate-400"
-                        >
-                            <X size={16} />
-                            Clear
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Removed Bulk Actions Floating Bar */}
         </div>
     );
 };

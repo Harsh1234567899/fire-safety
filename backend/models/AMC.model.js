@@ -25,13 +25,12 @@ const AMCSchema = mongoose.Schema({
     },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    visits: { type: Number, required: true, default: 4 },
     status: {
         type: String,
         enum: ["ongoing", "expired"],
         default: "ongoing",
     },
-    notes: { type: String }
+    notes: { type: String, trim: true }
 }, { timestamps: true })
 
 AMCSchema.index({ endDate: 1 });

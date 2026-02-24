@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onClose, onSignOut }) => {
                             <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40 transform rotate-3">
                                 <ShieldCheck size={20} className="text-white transform -rotate-3" />
                             </div>
-                            <span className="bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">Sahaj Group</span>
+                            <span className="bg-clip-text text-white from-white to-slate-400">{import.meta.env.VITE_APP_COMPANY_SHORT_NAME || 'Control Panel'}</span>
                         </div>
                         {/* Mobile Close Button */}
                         <button

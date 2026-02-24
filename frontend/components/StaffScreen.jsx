@@ -123,14 +123,14 @@ const StaffScreen = () => {
                     <Shield size={14} className="text-red-500" />
                     <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Access Control Center</span>
                 </div>
-                <div className="flex items-end justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 mb-1">Staff Management</h1>
                         <p className="text-gray-500">Provision and manage internal operational accounts.</p>
                     </div>
                     <button
                         onClick={openModal}
-                        className="flex items-center gap-2 bg-[#ef4444] hover:bg-red-600 text-white px-6 py-3 rounded-full font-bold transition-all shadow-xl shadow-red-500/20 active:scale-95 uppercase tracking-widest text-xs"
+                        className="flex items-center justify-center sm:justify-start w-full sm:w-auto gap-2 bg-[#ef4444] hover:bg-red-600 text-white px-6 py-3 rounded-full font-bold transition-all shadow-xl shadow-red-500/20 active:scale-95 uppercase tracking-widest text-xs"
                     >
                         <UserPlus size={18} />
                         <span>GENERATE CREDENTIALS</span>
@@ -140,7 +140,7 @@ const StaffScreen = () => {
 
             {/* Staff List */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="grid grid-cols-12 px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+                <div className="hidden lg:grid grid-cols-12 px-8 py-5 border-b border-gray-100 bg-gray-50/50">
                     <div className="col-span-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Staff Identity</div>
                     <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">System ID</div>
                     <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Role</div>
@@ -150,9 +150,9 @@ const StaffScreen = () => {
 
                 <div className="divide-y divide-gray-50">
                     {loading ? <div className="p-8 text-center text-gray-400">Loading staff...</div> : staffMembers.map((member) => (
-                        <div key={member.id} className="grid grid-cols-12 px-8 py-6 items-center hover:bg-gray-50 transition-colors group">
+                        <div key={member.id} className="relative flex flex-col lg:grid lg:grid-cols-12 px-6 sm:px-8 py-6 items-start lg:items-center hover:bg-gray-50 transition-colors group gap-4 lg:gap-0">
                             <div className="col-span-3 flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm">
+                                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm shrink-0">
                                     {member.initial}
                                 </div>
                                 <div>
@@ -161,23 +161,37 @@ const StaffScreen = () => {
                                 </div>
                             </div>
 
-                            <div className="col-span-2">
+                            {/* Mobile aggregated stats, hidden on desktop */}
+                            <div className="flex items-center gap-3 flex-wrap lg:hidden w-full">
+                                <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono font-bold text-gray-700">{member.systemId}</span>
+                                <div className="flex items-center gap-1.5 bg-white border border-gray-100 shadow-sm px-2 py-1 rounded">
+                                    {getRoleIcon(member.role)}
+                                    <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wide">{member.role}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 ml-auto">
+                                    <CheckCircle size={14} className="text-green-500 shrink-0" />
+                                    <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide shrink-0">{member.status}</span>
+                                </div>
+                            </div>
+
+                            {/* Desktop only columns */}
+                            <div className="hidden lg:block col-span-2">
                                 <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono font-bold text-gray-700">{member.systemId}</span>
                             </div>
 
-                            <div className="col-span-2 flex items-center gap-2">
+                            <div className="hidden lg:flex col-span-2 items-center gap-2">
                                 <div className="p-1 rounded bg-white border border-gray-100 shadow-sm">
                                     {getRoleIcon(member.role)}
                                 </div>
                                 <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wide">{member.role}</span>
                             </div>
 
-                            <div className="col-span-3 flex items-center gap-2">
+                            <div className="hidden lg:flex col-span-3 items-center gap-2">
                                 <CheckCircle size={14} className="text-green-500" />
                                 <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">{member.status}</span>
                             </div>
 
-                            <div className="col-span-2 flex justify-end">
+                            <div className="col-span-2 flex justify-end absolute right-4 top-4 lg:relative lg:right-0 lg:top-0">
                                 <button
                                     onClick={() => handleDelete(member.id)}
                                     className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -222,43 +236,43 @@ const StaffScreen = () => {
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Work Email</label>
                                     <div className="relative">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                                        <Mail className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
                                         <input
                                             type="email"
                                             value={formData.email}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-red-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
+                                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-red-100 rounded-xl pl-8 sm:pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
                                             placeholder="john@sahaj.com"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
+                            <div className="p-4 sm:p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
                                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Liaison Credentials</h4>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">System ID (Login)</label>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">System ID</label>
                                         <div className="relative">
-                                            <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                            <Hash className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                                             <input
                                                 type="text"
                                                 value={formData.systemId}
                                                 onChange={(e) => setFormData({ ...formData, systemId: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 focus:border-red-400 rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
+                                                className="w-full bg-white border border-slate-200 focus:border-red-400 rounded-xl pl-8 sm:pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
                                                 placeholder="jdoe01"
                                             />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Login Password</label>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Password</label>
                                         <div className="relative">
-                                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                            <Key className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                                             <input
                                                 type="text"
                                                 value={formData.password}
                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 focus:border-red-400 rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
+                                                className="w-full bg-white border border-slate-200 focus:border-red-400 rounded-xl pl-8 sm:pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
                                                 placeholder="securePass123"
                                             />
                                         </div>

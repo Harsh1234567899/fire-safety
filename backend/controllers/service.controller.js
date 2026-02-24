@@ -177,10 +177,10 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
       matchStage,
       {
         $addFields: {
-          model: "AMC_VISIT",
+          model: "amcVisit",
           service: "AMC Visit",
           serviceType: null,
-          endDate: "$endDate"
+          endDate: "$visitDate"
         }
       }
     ];

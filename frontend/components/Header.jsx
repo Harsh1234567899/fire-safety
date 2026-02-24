@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, X, ChevronRight, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Search, Bell, X, ChevronRight, AlertCircle, CheckCircle, Info, Menu } from 'lucide-react';
 import { MOCK_NOTIFICATIONS } from '../constants';
+import { searchClients } from '../api/client'; // Import API hook
 
-const Header = ({ clients, onNavigateToClient }) => {
+const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
 
     const searchRef = useRef(null);
@@ -29,20 +31,26 @@ const Header = ({ clients, onNavigateToClient }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Global search logic
+    // Global search logic (hits backend to search entire database)
     useEffect(() => {
         if (searchQuery.trim() === '') {
             setSearchResults([]);
-        } else {
-            const lower = searchQuery.toLowerCase();
-            const filtered = clients.filter(c =>
-                (c.firmName || '').toLowerCase().includes(lower) ||
-                (c.contactName || '').toLowerCase().includes(lower) ||
-                (c.email || '').toLowerCase().includes(lower)
-            ).slice(0, 5); // Only top 5
-            setSearchResults(filtered);
+            return;
         }
-    }, [searchQuery, clients]);
+
+        const delayDebounceFn = setTimeout(async () => {
+            try {
+                // limit to 5 results for the quick drop-down
+                const res = await searchClients(searchQuery, 1, 5);
+                setSearchResults(res.data?.data || []);
+            } catch (error) {
+                console.error("Global search failed:", error);
+                setSearchResults([]);
+            }
+        }, 400); // 400ms debounce
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery]);
 
     const markAllRead = () => {
         setNotifications(notifications.map(n => ({ ...n, read: true })));
@@ -58,9 +66,26 @@ const Header = ({ clients, onNavigateToClient }) => {
     };
 
     return (
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-50">
-            {/* Global Search Bar */}
-            <div className={`flex-1 max-w-xl transition-all ${isSearchFocused ? 'ring-4 ring-red-50/50' : ''}`} ref={searchRef}>
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between pl-4 pr-16 sm:px-8 sticky top-0 z-50 gap-4">
+            <div className="flex items-center gap-2">
+                {/* Mobile Menu Toggle */}
+                <button
+                    onClick={toggleSidebar}
+                    className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors shrink-0"
+                >
+                    <Menu size={24} />
+                </button>
+                {/* Mobile Search Toggle (Moved left to avoid OS overlays) */}
+                <button
+                    onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                    className={`md:hidden p-2 rounded-xl transition-all shrink-0 ${isMobileSearchOpen ? 'bg-red-50 text-red-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                    {isMobileSearchOpen ? <X size={20} /> : <Search size={20} />}
+                </button>
+            </div>
+
+            {/* Global Search Bar (Desktop) */}
+            <div className={`hidden md:block flex-1 max-w-xl transition-all ${isSearchFocused ? 'ring-4 ring-red-50/50' : ''}`} ref={searchRef}>
                 <div className={`relative group flex items-center bg-gray-50 border border-transparent rounded-xl px-4 py-2.5 transition-all ${isSearchFocused ? 'bg-white border-red-100' : 'hover:bg-gray-100'}`}>
                     <Search className={`shrink-0 mr-3 transition-colors ${isSearchFocused ? 'text-red-500' : 'text-gray-400'}`} size={18} />
                     <input
@@ -125,7 +150,71 @@ const Header = ({ clients, onNavigateToClient }) => {
                 )}
             </div>
 
-            <div className="flex items-center gap-6">
+            {/* Mobile Search Dropdown Container */}
+            {isMobileSearchOpen && (
+                <div className="absolute top-16 left-0 right-0 bg-white border-b border-gray-200 p-4 shadow-lg md:hidden z-40 animate-in slide-in-from-top-2">
+                    <div className="relative group flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 flex-1">
+                        <Search className="shrink-0 mr-3 text-red-500" size={18} />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setIsSearchFocused(true)}
+                            autoFocus
+                            placeholder="Global search directory..."
+                            className="w-full bg-transparent border-none outline-none text-sm placeholder:text-gray-400"
+                        />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="shrink-0 ml-2 text-gray-300 hover:text-gray-500">
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Mobile Results Block */}
+                    {searchQuery && (
+                        <div className="mt-2 bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden border-t-0 rounded-t-none">
+                            <div className="max-h-60 overflow-y-auto">
+                                {searchResults.length > 0 ? (
+                                    searchResults.map(client => (
+                                        <button
+                                            key={client.id}
+                                            onClick={() => {
+                                                onNavigateToClient(client);
+                                                setIsMobileSearchOpen(false);
+                                                setSearchQuery('');
+                                            }}
+                                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-50 text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs shrink-0">
+                                                    {client.initial}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h4 className="text-sm font-bold text-gray-900 truncate">{client.firmName}</h4>
+                                                    <p className="text-[10px] text-gray-400 truncate">{client.contactName}</p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={14} className="text-gray-300 ml-2 shrink-0" />
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-center text-gray-400">
+                                        <p className="text-xs font-medium">No records found</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-2 bg-gray-50 text-center">
+                                <button onClick={() => { setIsMobileSearchOpen(false); onNavigateToClient({ id: 'all' }); }} className="text-[10px] font-bold text-red-600 hover:text-red-700 uppercase tracking-widest">
+                                    View Directory
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="flex items-center gap-2 sm:gap-6 ml-auto">
                 {/* Notifications Bell */}
                 <div className="relative" ref={notificationRef}>
                     <button
@@ -183,16 +272,6 @@ const Header = ({ clients, onNavigateToClient }) => {
                     )}
                 </div>
 
-                {/* Online Status */}
-                <div className="flex items-center gap-2 border-l border-gray-200 pl-6">
-                    <div className="text-right">
-                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Status</p>
-                        <div className="flex items-center justify-end gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-xs font-semibold text-green-700">ONLINE</span>
-                        </div>
-                    </div>
-                </div>
             </div>
         </header>
     );

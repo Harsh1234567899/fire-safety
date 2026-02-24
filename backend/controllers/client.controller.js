@@ -6,6 +6,7 @@ import { client } from '../models/client.model.js'
 import { gasSilinder } from '../models/gasSilinder.model.js'
 import { fireNOC } from '../models/fireNOC.model.js'
 import { AMC } from '../models/AMC.model.js'
+import { amcVisit } from '../models/AMCvisit.model.js'
 import { monoIdIsValid } from '../utils/mongoDBid.js'
 import mongoose from 'mongoose'
 import ExcelJS from 'exceljs'
@@ -203,6 +204,8 @@ const getAllClients = asyncHandler(
                 { firmName: { $regex: q, $options: "i" } },
                 { city: { $regex: q, $options: "i" } },
                 { contactNumber: { $regex: q, $options: "i" } },
+                { email: { $regex: q, $options: "i" } },
+                { phone: { $regex: q, $options: "i" } }
             ];
         }
 
@@ -220,7 +223,7 @@ const getAllClients = asyncHandler(
         // 2. Fetch Related Data (Services)
         const clientIds = clients.map(c => c._id);
 
-        const [cylinders, nocs, amcs] = await Promise.all([
+        const [cylinders, nocs, amcs, amcVisits] = await Promise.all([
             gasSilinder.find({ clientId: { $in: clientIds } })
                 .populate('category', 'name')
                 .sort({ endDate: -1 }).lean(),
@@ -228,7 +231,9 @@ const getAllClients = asyncHandler(
                 .populate('nocType', 'name')
                 .sort({ endDate: -1 }).lean(),
             AMC.find({ clientId: { $in: clientIds } })
-                .sort({ endDate: -1 }).lean()
+                .sort({ endDate: -1 }).lean(),
+            amcVisit.find({ clientId: { $in: clientIds } })
+                .sort({ visitDate: -1 }).lean()
         ]);
 
         // 3. Map Data to Clients
@@ -236,12 +241,13 @@ const getAllClients = asyncHandler(
             const clientCylinders = cylinders.filter(c => String(c.clientId) === String(client._id));
             const clientNocs = nocs.filter(n => String(n.clientId) === String(client._id));
             const clientAmcs = amcs.filter(a => String(a.clientId) === String(client._id));
+            const clientAmcVisits = amcVisits.filter(av => String(av.clientId) === String(client._id));
 
             // Determine Active Services
             const services = [];
             if (clientCylinders.length > 0) services.push('CYLINDERS');
             if (clientNocs.length > 0) services.push('NOC');
-            if (clientAmcs.length > 0) services.push('AMC');
+            if (clientAmcs.length > 0 || clientAmcVisits.length > 0) services.push('AMC');
 
             // Build Ledger (Unified History)
             const ledger = [
@@ -271,7 +277,17 @@ const getAllClients = asyncHandler(
                     startDate: a.startDate,
                     expiryDate: a.endDate,
                     status: a.status,
-                    notes: a.notes
+                    notes: a.notes,
+                    visits: a.visits
+                })),
+                ...clientAmcVisits.map(av => ({
+                    _id: av._id,
+                    type: 'AMC_VISIT',
+                    category: 'AMC Technician Visit',
+                    startDate: av.visitDate,
+                    expiryDate: av.visitDate,
+                    status: 'COMPLETED',
+                    notes: av.notes
                 }))
             ].sort((a, b) => new Date(b.createdAt || b.startDate) - new Date(a.createdAt || a.startDate)); // Sort by newest
 

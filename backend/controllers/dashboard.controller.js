@@ -1,6 +1,6 @@
 import { ApiResponse } from "../utils/ApiResponse.js";
-import {AMC} from '../models/AMC.model.js'
-import {gasSilinder} from '../models/gasSilinder.model.js'
+import { AMC } from '../models/AMC.model.js'
+import { gasSilinder } from '../models/gasSilinder.model.js'
 import { fireNOC } from '../models/fireNOC.model.js'
 import { client } from "../models/client.model.js";
 
@@ -8,12 +8,15 @@ export async function getDashboardCounts(req, res) {
   try {
     // Option A: simple & explicit (recommended for clarity)
     const now = new Date();
+    const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const next30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const [
       clientsCount,
       amcCounts,
       feCounts,
       nocCounts,
+      regionalDensity
     ] = await Promise.all([
       // clients
       client.countDocuments({}),
@@ -22,29 +25,53 @@ export async function getDashboardCounts(req, res) {
       (async () => {
         const total = await AMC.countDocuments({});
         const expired = await AMC.countDocuments({ endDate: { $lt: now } });
+        const critical = await AMC.countDocuments({ endDate: { $gte: now, $lte: next7Days } });
+        const warning = await AMC.countDocuments({ endDate: { $gt: next7Days, $lte: next30Days } });
         const ongoing = total - expired;
-        return { total, ongoing, expired };
+        return { total, ongoing, expired, critical, warning };
       })(),
 
       // Fire Extinguisher counts by expiry
       (async () => {
         const total = await gasSilinder.countDocuments({});
         const expired = await gasSilinder.countDocuments({ endDate: { $lt: now } });
+        const critical = await gasSilinder.countDocuments({ endDate: { $gte: now, $lte: next7Days } });
+        const warning = await gasSilinder.countDocuments({ endDate: { $gt: next7Days, $lte: next30Days } });
         const ongoing = total - expired;
-        return { total, ongoing, expired };
+        return { total, ongoing, expired, critical, warning };
       })(),
 
       // Fire NOC counts by expiry
       (async () => {
         const total = await fireNOC.countDocuments({});
-        const expired = await fireNOC.countDocuments({endDate: { $lt: now } });
+        const expired = await fireNOC.countDocuments({ endDate: { $lt: now } });
+        const critical = await fireNOC.countDocuments({ endDate: { $gte: now, $lte: next7Days } });
+        const warning = await fireNOC.countDocuments({ endDate: { $gt: next7Days, $lte: next30Days } });
         const ongoing = total - expired;
-        return { total, ongoing, expired };
+        return { total, ongoing, expired, critical, warning };
       })(),
+
+      // Regional Density (Clients grouped by City)
+      (async () => {
+        const regions = await client.aggregate([
+          { $group: { _id: "$city", value: { $sum: 1 } } },
+          { $project: { _id: 0, name: "$_id", value: 1 } },
+          { $sort: { value: -1 } },
+          { $limit: 7 }
+        ]);
+        // Handle empty or missing cities map to 'Unknown'
+        return regions.map(r => ({ name: r.name ? r.name.trim() : 'Unknown', value: r.value }));
+      })()
     ]);
 
     // Example response shape
-    return res.status(200).json(new ApiResponse(200,{clientsCount,amc: amcCounts,fireExtinguishers: feCounts,fireNOCs: nocCounts},"all data"));
+    return res.status(200).json(new ApiResponse(200, {
+      clientsCount,
+      amc: amcCounts,
+      fireExtinguishers: feCounts,
+      fireNOCs: nocCounts,
+      regional: regionalDensity
+    }, "all data"));
   } catch (err) {
     console.error("Error in getDashboardCounts:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -126,7 +153,7 @@ export async function getMonthlyServiceStatus(req, res) {
       aggregateMonthlyStatusByExpiry(fireNOC, year),
     ]);
 
-    return res.status(200).json(new ApiResponse(200,{year,amc,fireExtinguishers,fireNOCs},"all data fatched"));
+    return res.status(200).json(new ApiResponse(200, { year, amc, fireExtinguishers, fireNOCs }, "all data fatched"));
   } catch (err) {
     console.error("Error in getMonthlyServiceStatus:", err);
     return res.status(500).json({ success: false, message: "Server error" });

@@ -28,7 +28,8 @@ import {
     Eye,
     Copy,
     Loader2,
-    RefreshCw
+    RefreshCw,
+    Filter
 } from 'lucide-react';
 import CertificateTemplate from './CertificateTemplate';
 import { createRoot } from 'react-dom/client';
@@ -36,15 +37,21 @@ import { toast } from 'react-hot-toast';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 
 import { useSelector, useDispatch } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
 import apiClient from '../api/api';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const dispatch = useDispatch();
-    const { items: clients = [], loading } = useSelector(state => state.clients); // Ensure default empty array
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { items: clients = [], loading, pagination } = useSelector(state => state.clients); // Ensure default empty array
     const { user } = useSelector(state => state.auth);
     const userRole = user?.role;
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageLimit, setPageLimit] = useState(25);
+
     // Columns Definition
     const allColumns = [
         { key: 'index', label: 'Index', sortable: false },
@@ -61,6 +68,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
     const [visibleColumns, setVisibleColumns] = useState(['index', 'firmName', 'contactNumber', 'email', 'gstNumber', 'city', 'createdAt', 'view']);
     const [showColumnMenu, setShowColumnMenu] = useState(false);
+    const [showMobileFilters, setShowMobileFilters] = useState(false);
     const columnMenuRef = useRef(null);
     const [isDownloading, setIsDownloading] = useState(false);
 
@@ -90,10 +98,29 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
 
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-    // Auto-refresh clients when screen mounts
+    // Auto-refresh clients when screen mounts or pagination parameters change
     useEffect(() => {
-        dispatch(fetchClients(''));
-    }, [dispatch]);
+        dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit }));
+    }, [dispatch, currentPage, pageLimit]);
+
+    // Check for auto-open client profile directives from router state
+    useEffect(() => {
+        if (location.state?.selectedClient) {
+            setSelectedClient(location.state.selectedClient);
+            // Replace state to avoid re-opening modal on refresh
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate, location.pathname]);
+
+    // Handle initial search trigger (debounce optional, implemented manually via enter/button initially if needed)
+    useEffect(() => {
+        // Reset to page 1 on new search
+        setCurrentPage(1);
+        const delayDebounceFn = setTimeout(() => {
+            dispatch(fetchClients({ query: searchTerm, page: 1, limit: pageLimit }));
+        }, 500); // 500ms debounce
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, dispatch, pageLimit]);
 
     // Close column menu on outside click
     useEffect(() => {
@@ -411,13 +438,13 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     if (selectedClient && !isEditing) {
         return (
             <div className="animate-in fade-in slide-in-from-right-8 duration-500 h-full flex flex-col">
-                <div className="mb-8 flex items-center justify-between">
-                    <button onClick={() => setSelectedClient(null)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase hover:text-gray-900 transition-colors tracking-widest"><ArrowLeft size={16} />Back to Directory</button>
-                    <div className="flex gap-3">
+                <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <button onClick={() => setSelectedClient(null)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase hover:text-gray-900 transition-colors tracking-widest w-fit"><ArrowLeft size={16} />Back to Directory</button>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
                         <button
                             onClick={() => handleViewAllClientPDF(selectedClient)}
                             disabled={!!isDownloading || !selectedClient.ledger?.length}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all
+                            className={`flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all flex-1 sm:flex-none
                                 ${isDownloading === 'ALL'
                                     ? 'bg-gray-100 text-gray-400 cursor-wait'
                                     : !selectedClient.ledger?.length
@@ -427,26 +454,26 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                             <Printer size={14} className={isDownloading === 'ALL' ? 'animate-pulse' : ''} />
                             {isDownloading === 'ALL' ? 'Generating...' : 'View Certificate'}
                         </button>
-                        <button onClick={(e) => handleEditClient(e, selectedClient)} className="flex items-center gap-2 bg-white border border-gray-200 px-5 py-2.5 rounded-xl font-bold text-xs uppercase text-gray-700 hover:border-red-200 hover:bg-red-50 transition-all tracking-widest"><Edit2 size={14} />Edit Profile</button>
+                        <button onClick={(e) => handleEditClient(e, selectedClient)} className="flex items-center justify-center gap-2 bg-white border border-gray-200 px-4 md:px-5 py-2.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase text-gray-700 hover:border-red-200 hover:bg-red-50 transition-all tracking-widest flex-1 sm:flex-none"><Edit2 size={14} />Edit Profile</button>
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-8 flex-1 overflow-hidden">
-                    <div className="w-full md:w-80 flex flex-col gap-6 overflow-y-auto shrink-0">
-                        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm text-center">
-                            <div className="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">{selectedClient.initial}</div>
-                            <h2 className="text-xl font-bold mb-1">{selectedClient.firmName}</h2>
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8 flex-1 min-h-0 overflow-y-auto md:overflow-hidden pb-20 md:pb-0">
+                    <div className="w-full md:w-80 flex flex-col gap-6 shrink-0 h-auto md:overflow-y-auto">
+                        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-gray-100 shadow-sm text-center">
+                            <div className="w-16 h-16 md:w-20 md:h-20 bg-red-600 rounded-2xl md:rounded-3xl flex items-center justify-center text-white text-2xl md:text-3xl font-bold mx-auto mb-4">{selectedClient.initial}</div>
+                            <h2 className="text-lg md:text-xl font-bold mb-1">{selectedClient.firmName}</h2>
 
-                            <div className="space-y-4 mt-8 text-left">
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><CreditCard size={14} className="text-gray-400" /><span className="text-xs font-bold text-gray-700">{selectedClient.gstNumber || 'NO GST'}</span></div>
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><Phone size={14} className="text-gray-400" /><span className="text-xs font-mono font-bold text-gray-700">{selectedClient.contactPerson} - {selectedClient.phone || selectedClient.contactNumber}</span></div>
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><Mail size={14} className="text-gray-400" /><span className="text-xs font-bold text-gray-700 truncate">{selectedClient.email}</span></div>
-                                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-2xl"><MapPin size={14} className="text-gray-400 mt-1 shrink-0" /><span className="text-xs font-bold text-gray-700 leading-relaxed">{selectedClient.address || 'Address not set'}, {selectedClient.city || ''} {selectedClient.pincode || ''}</span></div>
+                            <div className="space-y-3 md:space-y-4 mt-6 md:mt-8 text-left">
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><CreditCard size={14} className="text-gray-400 shrink-0" /><span className="text-[10px] md:text-xs font-bold text-gray-700">{selectedClient.gstNumber || 'NO GST'}</span></div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><Phone size={14} className="text-gray-400 shrink-0" /><span className="text-[10px] md:text-xs font-mono font-bold text-gray-700">{selectedClient.contactPerson} - {selectedClient.phone || selectedClient.contactNumber}</span></div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl"><Mail size={14} className="text-gray-400 shrink-0" /><span className="text-[10px] md:text-xs font-bold text-gray-700 break-all">{selectedClient.email}</span></div>
+                                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-2xl"><MapPin size={14} className="text-gray-400 mt-1 shrink-0" /><span className="text-[10px] md:text-xs font-bold text-gray-700 leading-relaxed">{selectedClient.address || 'Address not set'}, {selectedClient.city || ''} {selectedClient.pincode || ''}</span></div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 bg-white rounded-[2.5rem] border border-gray-100 p-10 overflow-y-auto">
+                    <div className="flex-1 bg-white rounded-[2rem] md:rounded-[2.5rem] border border-gray-100 p-6 md:p-10 h-auto md:overflow-y-auto mb-10 md:mb-0">
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-lg font-bold">Active Asset Ledger</h3>
@@ -468,6 +495,9 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                             </div>
                                             <div>
                                                 <h4 className="font-bold">{item.category || item.type} Provision</h4>
+                                                {item.type === 'AMC' && item.visits && (
+                                                    <p className="text-xs text-gray-500 font-medium mt-0.5">Technician Visits: <span className="text-purple-600 font-bold">{item.visits} per year</span></p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -490,46 +520,24 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
-            {/* Header Section */}
-            {/* Header Section */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="mb-6 flex justify-between items-start gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">Firm Directory</h1>
-                    <p className="text-gray-500 italic">Centralized registry of all registered corporate safety partners.</p>
+                    <p className="text-gray-500 italic text-sm">Centralized registry of all corporate safety partners.</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                    {userRole === 'ADMIN' && (
-                        <button
-                            onClick={() => setIsImportModalOpen(true)}
-                            className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm"
-                        >
-                            <Upload size={16} className="text-red-500" /> Import
-                        </button>
-                    )}
-                    <button
-                        onClick={handleExportDirectory}
-                        className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:border-gray-300 transition-all uppercase tracking-widest shadow-sm"
-                    >
-                        <Download size={16} /> Export
-                    </button>
-                    <button
-                        onClick={() => dispatch(fetchClients(''))}
-                        className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm"
-                    >
-                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
-                    </button>
-                    <button
-                        onClick={onRegisterNew}
-                        className="flex items-center gap-2 bg-[#ef4444] text-white px-5 py-2.5 rounded-full font-bold text-xs shadow-lg shadow-red-500/20 active:scale-95 transition-all uppercase tracking-widest"
-                    >
-                        <Plus size={16} /> Register Firm
-                    </button>
-                </div>
+                {/* Mobile & Tablet Toggle */}
+                <button
+                    onClick={() => setShowMobileFilters(!showMobileFilters)}
+                    className="lg:hidden flex items-center justify-center gap-2 bg-white border border-gray-200 px-4 py-2.5 rounded-xl font-bold text-xs text-gray-700 shadow-sm hover:bg-gray-50 shrink-0"
+                >
+                    <Filter size={16} className={showMobileFilters ? "text-red-500" : "text-gray-400"} />
+                    <span className="hidden sm:inline">{showMobileFilters ? "Close Filters" : "Filters & Actions"}</span>
+                </button>
             </div>
 
-            {/* Filter & Control Bar */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-4">
-                <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1.5 flex items-center group focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 transition-all hover:border-red-500/50">
+            {/* Persistent Mobile Search Bar */}
+            <div className="mb-4 lg:hidden">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1.5 flex items-center group focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 transition-all hover:border-red-500/50">
                     <Search className="text-gray-400 ml-3 shrink-0 transition-colors pointer-events-none group-focus-within:text-red-500" size={18} />
                     <input
                         type="text"
@@ -539,45 +547,94 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                         className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium text-gray-700 h-10 w-full placeholder:text-gray-400"
                     />
                 </div>
+            </div>
 
-                {/* Column Manager */}
-                <div className="relative" ref={columnMenuRef}>
-                    <button
-                        onClick={() => setShowColumnMenu(!showColumnMenu)}
-                        className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 uppercase tracking-wide transition-all w-full md:w-auto"
-                    >
-                        <FileSpreadsheet size={16} /> Columns
-                    </button>
+            {/* Collapsible Filters & Actions */}
+            <div className={`flex-col gap-4 mb-4 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
+                {/* Actions */}
+                <div className="flex justify-end">
+                    <div className="flex flex-wrap gap-3">
+                        {userRole === 'ADMIN' && (
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm flex-1 sm:flex-none justify-center"
+                            >
+                                <Upload size={16} className="text-red-500" /> Import
+                            </button>
+                        )}
+                        <button
+                            onClick={handleExportDirectory}
+                            className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:border-gray-300 transition-all uppercase tracking-widest shadow-sm flex-1 sm:flex-none justify-center"
+                        >
+                            <Download size={16} /> Export
+                        </button>
+                        <button
+                            onClick={() => dispatch(fetchClients(''))}
+                            className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-full font-bold text-xs text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm flex-1 sm:flex-none justify-center"
+                        >
+                            <RefreshCw size={16} className={loading ? "animate-spin text-red-600" : ""} /> Refresh
+                        </button>
+                        <button
+                            onClick={onRegisterNew}
+                            className="flex items-center gap-2 bg-[#ef4444] text-white px-5 py-2.5 rounded-full font-bold text-xs shadow-lg shadow-red-500/20 active:scale-95 transition-all uppercase tracking-widest flex-1 sm:flex-none justify-center"
+                        >
+                            <Plus size={16} /> Register Firm
+                        </button>
+                    </div>
+                </div>
 
-                    {showColumnMenu && (
-                        <div className="absolute right-0 top-12 bg-white border border-gray-100 rounded-2xl shadow-xl w-60 z-50 p-4 animate-in fade-in zoom-in-95 duration-200">
-                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Visible Columns</h4>
-                            <div className="space-y-2">
-                                {allColumns.map(col => (
-                                    <label key={col.key} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${visibleColumns.includes(col.key) ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300'}`}>
-                                            {visibleColumns.includes(col.key) && <Check size={10} />}
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            className="hidden"
-                                            checked={visibleColumns.includes(col.key)}
-                                            onChange={() => toggleColumn(col.key)}
-                                        />
-                                        <span className={`text-xs font-bold ${visibleColumns.includes(col.key) ? 'text-gray-900' : 'text-gray-500'}`}>{col.label}</span>
-                                    </label>
-                                ))}
+                {/* Filter & Control Bar */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+                    <div className="hidden lg:flex flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1.5 items-center group focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10 transition-all hover:border-red-500/50">
+                        <Search className="text-gray-400 ml-3 shrink-0 transition-colors pointer-events-none group-focus-within:text-red-500" size={18} />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search by Firm Name, ID, or Contact..."
+                            className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-medium text-gray-700 h-10 w-full placeholder:text-gray-400"
+                        />
+                    </div>
+
+                    {/* Column Manager */}
+                    <div className="relative" ref={columnMenuRef}>
+                        <button
+                            onClick={() => setShowColumnMenu(!showColumnMenu)}
+                            className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 uppercase tracking-wide transition-all w-full md:w-auto"
+                        >
+                            <FileSpreadsheet size={16} /> Columns
+                        </button>
+
+                        {showColumnMenu && (
+                            <div className="absolute right-0 top-12 bg-white border border-gray-100 rounded-2xl shadow-xl w-60 z-50 p-4 animate-in fade-in zoom-in-95 duration-200">
+                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Visible Columns</h4>
+                                <div className="space-y-2">
+                                    {allColumns.map(col => (
+                                        <label key={col.key} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${visibleColumns.includes(col.key) ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300'}`}>
+                                                {visibleColumns.includes(col.key) && <Check size={10} />}
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                className="hidden"
+                                                checked={visibleColumns.includes(col.key)}
+                                                onChange={() => toggleColumn(col.key)}
+                                            />
+                                            <span className={`text-xs font-bold ${visibleColumns.includes(col.key) ? 'text-gray-900' : 'text-gray-500'}`}>{col.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between">
+                                    <button onClick={() => setVisibleColumns(allColumns.map(c => c.key))} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase">Show All</button>
+                                </div>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between">
-                                <button onClick={() => setVisibleColumns(allColumns.map(c => c.key))} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase">Show All</button>
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Advanced Table */}
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex-1 overflow-hidden flex flex-col">
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex flex-col overflow-visible">
                 <div className="overflow-auto h-full custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-gray-50 sticky top-0 z-10">
@@ -683,6 +740,50 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="border-t border-gray-100 bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+                        <span>
+                            Showing {((pagination?.currentPage || 1) - 1) * (pagination?.limit || 25) + 1} to {Math.min((pagination?.currentPage || 1) * (pagination?.limit || 25), pagination?.totalItems || 0)} of {pagination?.totalItems || 0}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <span>Rows per page:</span>
+                            <select
+                                value={pageLimit}
+                                onChange={(e) => {
+                                    setPageLimit(Number(e.target.value));
+                                }}
+                                className="bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-2 py-1 outline-none focus:border-red-500 cursor-pointer"
+                            >
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                                <option value={200}>200</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
+                        >
+                            Previous
+                        </button>
+                        <span className="flex items-center justify-center min-w-[32px] h-8 rounded-lg bg-red-50 text-red-600 text-xs font-bold">
+                            {currentPage} / {pagination?.totalPages || 1}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(pagination?.totalPages || 1, prev + 1))}
+                            disabled={currentPage >= (pagination?.totalPages || 1)}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
 

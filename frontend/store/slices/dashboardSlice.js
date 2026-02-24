@@ -44,8 +44,8 @@ const dashboardSlice = createSlice({
                     metrics: {
                         totalClients: s?.clientsCount || 0,
                         expiredRecords: (s?.amc?.expired || 0) + (s?.fireExtinguishers?.expired || 0) + (s?.fireNOCs?.expired || 0),
-                        critical7Day: 0,
-                        warning30Day: 0
+                        critical7Day: (s?.amc?.critical || 0) + (s?.fireExtinguishers?.critical || 0) + (s?.fireNOCs?.critical || 0),
+                        warning30Day: (s?.amc?.warning || 0) + (s?.fireExtinguishers?.warning || 0) + (s?.fireNOCs?.warning || 0)
                     },
                     provisions: {
                         cylinders: s?.fireExtinguishers?.total || 0,
@@ -59,8 +59,13 @@ const dashboardSlice = createSlice({
                     assets: [
                         { name: 'NOCS', value: s?.fireNOCs?.total || 0, fill: '#6366f1' },
                         { name: 'AMCS', value: s?.amc?.total || 0, fill: '#a855f7' },
+                        { name: 'CYLINDERS', value: s?.fireExtinguishers?.total || 0, fill: '#f59e0b' },
                     ],
-                    regional: s?.regional || [],
+                    regional: (s?.regional || []).map((r, i) => ({
+                        ...r,
+                        city: r.name,
+                        fill: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#06b6d4'][i % 7]
+                    })),
                     monthlyStatus: s?.monthlyStatus || []
                 };
             })

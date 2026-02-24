@@ -27,7 +27,7 @@ const NotFoundScreen = () => {
                     Sector Not Found
                 </h2>
                 <p className="text-sm text-gray-400 mb-10 leading-relaxed max-w-sm mx-auto">
-                    The route you requested does not exist within the Sahaj Management System. Please verify the URL or navigate using the sidebar.
+                    The route you requested does not exist within the {import.meta.env.VITE_APP_COMPANY_SHORT_NAME || 'Company'} Management System. Please verify the URL or navigate using the sidebar.
                 </p>
 
                 {/* Action Buttons */}
@@ -50,7 +50,7 @@ const NotFoundScreen = () => {
 
                 {/* Footer */}
                 <p className="mt-12 text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">
-                    Sahaj Group of Services — Liaison Management System
+                    {import.meta.env.VITE_APP_COMPANY_NAME || 'Liaison Management System'}
                 </p>
             </div>
         </div>

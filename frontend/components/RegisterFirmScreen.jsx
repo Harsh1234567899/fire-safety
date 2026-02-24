@@ -178,7 +178,7 @@ const RegisterFirmScreen = ({ onRegister }) => {
             const defaultNocType = nocTypes.find(t => t.type.toLowerCase().includes('fire')) || nocTypes[0];
             setNocs([...nocs, { id: newId, type: defaultNocType ? defaultNocType.type : '', startDate: '', expiry: '', renewalNotes: '', attachedFiles: [] }]);
         } else if (activeTab === 'AMC') {
-            setAmcs([...amcs, { id: newId, site: '', personDetails: '', name: '', mobile: '', startDate: '', expiry: '', renewalNotes: '', attachedFiles: [], visits: 4 }]);
+            setAmcs([...amcs, { id: newId, site: 'AMC', personDetails: '', name: '', mobile: '', startDate: '', expiry: '', renewalNotes: '', attachedFiles: [] }]);
         }
     };
 
@@ -523,7 +523,6 @@ const RegisterFirmScreen = ({ onRegister }) => {
                 mobile: a.mobile || '',
                 startDate: a.startDate,
                 endDate: a.expiry,
-                visits: a.visits || 4,
                 notes: a.renewalNotes || '',
                 documents: (a.attachedFiles || []).map(file => typeof file === 'string' ? file : file._id).filter(Boolean)
             }));
@@ -1131,10 +1130,7 @@ const RegisterFirmScreen = ({ onRegister }) => {
                                             <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Technician Visits</label>
-                                        <input type="number" min="1" placeholder="4" value={item.visits} onChange={(e) => updateItem(item.id, 'AMC', 'visits', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                    </div>
+
                                 </div>
 
                                 <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -1271,19 +1267,27 @@ const RegisterFirmScreen = ({ onRegister }) => {
     }
 
     return (
-        <div className="h-full flex flex-col items-center justify-center">
-            <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl px-4">
-                <div onClick={() => { clearAllPersistedData(); setView('ENROLLMENT'); }} className="flex-1 bg-white p-12 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-2xl hover:border-red-100 transition-all duration-500 group cursor-pointer relative overflow-hidden">
-                    <div className="w-20 h-20 bg-[#ef4444] rounded-full flex items-center justify-center text-white mb-10 shadow-xl group-hover:scale-110 transition-transform"><UserPlus size={36} /></div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4 group-hover:text-red-600 transition-colors">New Enrollment</h2>
-                    <p className="text-gray-500 text-lg leading-relaxed mb-16">Register a new firm with automated, collision-verified global serial sequences.</p>
-                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-widest group-hover:text-red-600 transition-colors uppercase">PROCEED TO FLOW <ArrowRight size={16} /></div>
+        <div className="h-full flex flex-col items-center justify-center py-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 w-full max-w-5xl px-4 auto-rows-fr">
+                <div onClick={() => { clearAllPersistedData(); setView('ENROLLMENT'); }} className="flex flex-col justify-between bg-white p-6 sm:p-12 rounded-3xl sm:rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-2xl hover:border-red-100 transition-all duration-500 group cursor-pointer relative overflow-hidden h-full">
+                    <div>
+                        <div className="w-14 h-14 sm:w-20 sm:h-20 bg-[#ef4444] rounded-2xl sm:rounded-full flex items-center justify-center text-white mb-6 sm:mb-10 shadow-xl group-hover:scale-110 transition-transform">
+                            <UserPlus className="w-6 h-6 sm:w-10 sm:h-10" />
+                        </div>
+                        <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-4 group-hover:text-red-600 transition-colors">New Enrollment</h2>
+                        <p className="text-gray-500 text-sm sm:text-lg leading-relaxed mb-6 sm:mb-16">Register a new firm with automated, collision-verified global serial sequences.</p>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest group-hover:text-red-600 transition-colors mt-auto">PROCEED TO FLOW <ArrowRight size={16} /></div>
                 </div>
-                <div onClick={() => setView('RENEWAL')} className="flex-1 bg-white p-12 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer">
-                    <div className="w-20 h-20 bg-[#0f172a] rounded-full flex items-center justify-center text-white mb-10 shadow-xl group-hover:scale-110 transition-transform"><RefreshCw size={36} /></div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Service Renewal</h2>
-                    <p className="text-gray-500 text-lg leading-relaxed mb-16">Access existing records to renew provisions with new unique serial sequences.</p>
-                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-widest uppercase">PROCEED TO FLOW <ArrowRight size={16} /></div>
+                <div onClick={() => setView('RENEWAL')} className="flex flex-col justify-between bg-white p-6 sm:p-12 rounded-3xl sm:rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-2xl transition-all duration-500 group cursor-pointer h-full">
+                    <div>
+                        <div className="w-14 h-14 sm:w-20 sm:h-20 bg-[#0f172a] rounded-2xl sm:rounded-full flex items-center justify-center text-white mb-6 sm:mb-10 shadow-xl group-hover:scale-110 transition-transform">
+                            <RefreshCw className="w-6 h-6 sm:w-10 sm:h-10" />
+                        </div>
+                        <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-4">Service Renewal</h2>
+                        <p className="text-gray-500 text-sm sm:text-lg leading-relaxed mb-6 sm:mb-16">Access existing records to renew provisions with new unique serial sequences.</p>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest mt-auto">PROCEED TO FLOW <ArrowRight size={16} /></div>
                 </div>
             </div>
         </div>

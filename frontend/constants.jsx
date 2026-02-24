@@ -62,7 +62,7 @@ export const MOCK_STAFF_DATA = [
         systemId: "admin01",
         password: "admin123",
         name: "Chief Admin",
-        email: "admin@sahaj.com",
+        email: "admin@company.com",
         role: "ADMIN",
         status: "ACTIVE ACCESS",
         initial: "A"
@@ -72,7 +72,7 @@ export const MOCK_STAFF_DATA = [
         systemId: "manager01",
         password: "manager123",
         name: "Operations Manager",
-        email: "ops@sahaj.com",
+        email: "ops@company.com",
         role: "MANAGER",
         status: "ACTIVE ACCESS",
         initial: "M"
@@ -82,7 +82,7 @@ export const MOCK_STAFF_DATA = [
         systemId: "godown01",
         password: "godown123",
         name: "Stock Handler",
-        email: "godown@sahaj.com",
+        email: "godown@company.com",
         role: "GO DOWN MANAGER",
         status: "ACTIVE ACCESS",
         initial: "G"

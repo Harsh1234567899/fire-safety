@@ -62,6 +62,7 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
     const isCylinder = service?.model === 'FIRE_EXTINGUISHER' || service?.assetType === 'Cylinder';
     const isNoc = service?.model === 'FIRE_NOC' || service?.assetType === 'NOC';
     const isAmc = service?.model === 'AMC' || service?.assetType === 'AMC';
+    const isAmcVisit = service?.model === 'AMC_VISIT' || service?.model === 'amcVisit' || service?.type === 'AMC_VISIT';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -71,13 +72,14 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                     <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isNoc ? 'bg-blue-50 text-blue-500' :
                             isAmc ? 'bg-purple-50 text-purple-500' :
-                                'bg-orange-50 text-orange-500'
+                                isAmcVisit ? 'bg-indigo-50 text-indigo-500' :
+                                    'bg-orange-50 text-orange-500'
                             }`}>
-                            {isNoc ? <FileText size={24} /> : isAmc ? <ShieldCheck size={24} /> : <Box size={24} />}
+                            {isNoc ? <FileText size={24} /> : (isAmc || isAmcVisit) ? <ShieldCheck size={24} /> : <Box size={24} />}
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">
-                                {isNoc ? 'Fire NOC' : isAmc ? 'AMC Contract' : 'Fire Extinguisher'} Details
+                                {isNoc ? 'Fire NOC' : isAmc ? 'AMC Contract' : isAmcVisit ? 'AMC Visit' : 'Fire Extinguisher'} Details
                             </h2>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                 ID: {service?._id || service?.id || 'Unknown'}
@@ -196,43 +198,62 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                                                 </div>
                                             </>
                                         )}
+                                        {isAmcVisit && (
+                                            <>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Service Type</p>
+                                                    <span className="inline-flex px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-600 text-[10px] font-bold uppercase">
+                                                        AMC Visit
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Visit Date</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar size={12} className="text-indigo-500" />
+                                                        <p className="text-sm font-bold text-gray-900">{formatDate(service?.visitDate || service?.startDate)}</p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </section>
 
                             {/* Timeline Section */}
-                            <section>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Clock size={14} className="text-gray-400" />
-                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timeline Details</h3>
-                                </div>
-                                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                        <div>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Start Date</p>
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={12} className="text-blue-500" />
-                                                <p className="text-sm font-bold text-gray-900">{formatDate(service?.startDate)}</p>
+                            {!isAmcVisit && (
+                                <section>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Clock size={14} className="text-gray-400" />
+                                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timeline Details</h3>
+                                    </div>
+                                    <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Start Date</p>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size={12} className="text-blue-500" />
+                                                    <p className="text-sm font-bold text-gray-900">{formatDate(service?.startDate)}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Expiry Date</p>
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={12} className="text-red-500" />
-                                                <p className="text-sm font-bold text-gray-900">{formatDate(service?.endDate || service?.expiryDate)}</p>
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Expiry Date</p>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size={12} className="text-red-500" />
+                                                    <p className="text-sm font-bold text-gray-900">{formatDate(service?.endDate || service?.expiryDate)}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Created At</p>
-                                            <p className="text-[11px] font-bold text-gray-600">{formatDateTime(service?.createdAt)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Last Updated</p>
-                                            <p className="text-[11px] font-bold text-gray-600">{formatDateTime(service?.updatedAt)}</p>
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Created At</p>
+                                                <p className="text-[11px] font-bold text-gray-600">{formatDateTime(service?.createdAt)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Last Updated</p>
+                                                <p className="text-[11px] font-bold text-gray-600">{formatDateTime(service?.updatedAt)}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </section>
+                                </section>
+                            )}
 
                             {/* Resource Section (Serials or Documents) */}
                             {isCylinder && service?.serialNumber?.length > 0 && (
