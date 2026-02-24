@@ -75,7 +75,8 @@ const loginUser = asyncHandler(
 
         const options = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production'
+            secure: true, // Always true for cross-site cookies
+            sameSite: 'none' // Required for cross-site cookie sending
         }
         res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(new ApiResponse(200, { user: loggedInUser, accessToken, refreshToken }, "User logged in successfully"))
     }
@@ -194,7 +195,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production'
+            secure: true,
+            sameSite: 'none'
         }
 
         const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id)

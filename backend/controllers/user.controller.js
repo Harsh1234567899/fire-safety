@@ -17,24 +17,25 @@ const getAllUsers = asyncHandler(async (req, res) => {
         new ApiResponse(200, users, "All users fetched")
     );
 });
-const logout =asyncHandler(async (req,res) => {
+const logout = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate( // update the token
         req.user._id,
         {
 
-            $unset:{
+            $unset: {
                 refreshToken: 1
             }
         },
-        { 
+        {
             new: true
         }
     )
-    const options = { // not alloed to modify the cookies
+    const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: 'none'
     }
-    return res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options).json(new ApiResponse(200,{},"user logged out"))
+    return res.status(200).clearCookie("accessToken", options).clearCookie("refreshToken", options).json(new ApiResponse(200, {}, "user logged out"))
 })
 export {
     logout,
