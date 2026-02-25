@@ -487,7 +487,9 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-4">
                                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'CYLINDERS' ? 'bg-orange-50 text-orange-500' :
-                                                item.type === 'NOC' ? 'bg-blue-50 text-blue-500' : 'bg-purple-50 text-purple-500'
+                                                item.type === 'NOC' ? 'bg-blue-50 text-blue-500' :
+                                                    item.type === 'AMC_VISIT' ? 'bg-indigo-50 text-indigo-500' :
+                                                        'bg-purple-50 text-purple-500'
                                                 }`}>
                                                 <ShieldCheck size={24} />
                                             </div>

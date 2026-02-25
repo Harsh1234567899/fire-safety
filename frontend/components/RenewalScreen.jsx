@@ -13,6 +13,7 @@ import { searchClients } from '../api/client';
 import { createCylinder, updateCylinder } from '../api/fireExtinguisher';
 import { createNOC, updateNOC } from '../api/fireNoc';
 import { createAMC, updateAMC } from '../api/amc';
+import { createAmcVisit, updateAmcVisit } from '../api/amcVisit';
 import { getClientServices } from '../api/service';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { getGasCategories, getNocTypes } from '../api/category';
@@ -51,6 +52,7 @@ const RenewalScreen = ({ onBack }) => {
     const [cylinders, setCylinders] = useState([]);
     const [nocs, setNocs] = useState([]);
     const [amcs, setAmcs] = useState([]);
+    const [amcVisits, setAmcVisits] = useState([]);
 
     // ── dropdown data ───────────────────────────────────────────────────
     const [gasCategories, setGasCategories] = useState([]);
@@ -62,6 +64,7 @@ const RenewalScreen = ({ onBack }) => {
     const [cylindersSaved, setCylindersSaved] = useState(false);
     const [nocsSaved, setNocsSaved] = useState(false);
     const [amcsSaved, setAmcsSaved] = useState(false);
+    const [amcVisitsSaved, setAmcVisitsSaved] = useState(false);
     const [savingSection, setSavingSection] = useState(null);
     const [uploadingFile, setUploadingFile] = useState(null); // track which item is uploading
     const [isDownloading, setIsDownloading] = useState(false);
@@ -158,17 +161,27 @@ const RenewalScreen = ({ onBack }) => {
                 lastExpiry: item.endDate,
             }));
 
+            const amcVisitsFromHistory = (history.amcVisits || []).map(item => ({
+                id: item._id?.toString() || String(Date.now() + Math.random()),
+                visitDate: toDateInput(item.endDate || item.visitDate), // endDate is visitDate mapped in service controller
+                notes: item.notes || '',
+                isNew: false,
+                lastExpiry: item.endDate || item.visitDate,
+            }));
+
             setCylinders(cylindersFromHistory);
             setNocs(nocsFromHistory);
             setAmcs(amcsFromHistory);
+            setAmcVisits(amcVisitsFromHistory);
 
             // default first tab to whichever has data
             if (cylindersFromHistory.length > 0) setActiveTab('CYLINDERS');
             else if (nocsFromHistory.length > 0) setActiveTab('NOC');
             else if (amcsFromHistory.length > 0) setActiveTab('AMC');
+            else if (amcVisitsFromHistory.length > 0) setActiveTab('AMC_VISITS');
 
             setClient({ ...selectedClient, _id: selectedClient._id || selectedClient.id });
-            setCylindersSaved(false); setNocsSaved(false); setAmcsSaved(false);
+            setCylindersSaved(false); setNocsSaved(false); setAmcsSaved(false); setAmcVisitsSaved(false);
             setView('FORM');
         } catch (e) {
             console.error(e);
@@ -180,15 +193,18 @@ const RenewalScreen = ({ onBack }) => {
 
     // ── generic item update ──────────────────────────────────────────────
     const updateItem = (id, section, field, value) => {
-        const setter = section === 'CYLINDERS' ? setCylinders : section === 'NOC' ? setNocs : setAmcs;
+        const setter = section === 'CYLINDERS' ? setCylinders : section === 'NOC' ? setNocs : section === 'AMC' ? setAmcs : setAmcVisits;
         setter(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
 
     // ── add new entries ──────────────────────────────────────────────────
     const addNewCylinder = () => {
+        const defaultFireCat = gasCategories.find(g => g.name.toLowerCase().includes('fire')) || gasCategories[0];
+        const defaultGasCategory = defaultFireCat ? defaultFireCat.name : '';
+
         setCylinders(prev => [...prev, {
             id: String(Date.now() + Math.random()),
-            gasCategory: gasCategories[0]?.name || '',
+            gasCategory: defaultGasCategory,
             kgLtr: '',
             serviceType: 'new',
             refillingType: 'new',
@@ -205,9 +221,11 @@ const RenewalScreen = ({ onBack }) => {
         setCylindersSaved(false);
     };
     const addNewNoc = () => {
+        const defaultNocType = nocTypes.find(t => t.type.toLowerCase().includes('fire')) || nocTypes[0];
+
         setNocs(prev => [...prev, {
             id: String(Date.now() + Math.random()),
-            type: '',
+            type: defaultNocType ? defaultNocType.type : '',
             startDate: new Date().toISOString().slice(0, 10),
             expiry: '',
             renewalNotes: '',
@@ -232,10 +250,20 @@ const RenewalScreen = ({ onBack }) => {
         }]);
         setAmcsSaved(false);
     };
+    const addNewAmcVisit = () => {
+        setAmcVisits(prev => [...prev, {
+            id: String(Date.now() + Math.random()),
+            visitDate: new Date().toISOString().slice(0, 10),
+            notes: '',
+            isNew: true,
+        }]);
+        setAmcVisitsSaved(false);
+    };
     const removeItem = (id, section) => {
         if (section === 'CYLINDERS') { setCylinders(prev => prev.filter(i => i.id !== id)); setCylindersSaved(false); }
         else if (section === 'NOC') { setNocs(prev => prev.filter(i => i.id !== id)); setNocsSaved(false); }
-        else { setAmcs(prev => prev.filter(i => i.id !== id)); setAmcsSaved(false); }
+        else if (section === 'AMC') { setAmcs(prev => prev.filter(i => i.id !== id)); setAmcsSaved(false); }
+        else { setAmcVisits(prev => prev.filter(i => i.id !== id)); setAmcVisitsSaved(false); }
     };
 
     // ── toggle serial selection ──────────────────────────────────────────
@@ -437,9 +465,33 @@ const RenewalScreen = ({ onBack }) => {
         }
     };
 
+    // ── save AMC Visits ──────────────────────────────────────────────────
+    const handleSaveAmcVisits = async () => {
+        if (!amcVisits.length) { toast.error('No AMC Visit records to save.'); return; }
+        const invalid = amcVisits.find(av => !av.visitDate || !av.notes);
+        if (invalid) { toast.error('Each AMC Visit needs a Visit Date and Notes.'); return; }
+        setSavingSection('AMC_VISITS');
+        try {
+            await Promise.all(amcVisits.map(av => {
+                const payload = {
+                    clientId: client._id,
+                    visitDate: av.visitDate,
+                    notes: av.notes,
+                };
+                return av.isNew ? createAmcVisit(payload) : updateAmcVisit(av.id, payload);
+            }));
+            setAmcVisitsSaved(true);
+            toast.success('AMC Visits saved!');
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Failed to save AMC Visits.');
+        } finally {
+            setSavingSection(null);
+        }
+    };
+
     // ── finish & generate PDF ────────────────────────────────────────────
     const handleFinish = () => {
-        const anySaved = cylindersSaved || nocsSaved || amcsSaved;
+        const anySaved = cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved;
         if (!anySaved) { toast.error('Save at least one section before finishing.'); return; }
         setView('DONE');
     };
@@ -649,7 +701,7 @@ const RenewalScreen = ({ onBack }) => {
 
                 {/* ── Tabs ── */}
                 <div className="flex items-center gap-2 mb-6">
-                    {['CYLINDERS', 'NOC', 'AMC'].map(tab => (
+                    {['CYLINDERS', 'NOC', 'AMC', 'AMC_VISITS'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -659,6 +711,7 @@ const RenewalScreen = ({ onBack }) => {
                             {tab === 'CYLINDERS' && cylinders.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{cylinders.length}</span>}
                             {tab === 'NOC' && nocs.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{nocs.length}</span>}
                             {tab === 'AMC' && amcs.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{amcs.length}</span>}
+                            {tab === 'AMC_VISITS' && amcVisits.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{amcVisits.length}</span>}
                         </button>
                     ))}
                 </div>
@@ -704,18 +757,8 @@ const RenewalScreen = ({ onBack }) => {
                                         </div>
                                     )}
 
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        {/* Gas Category */}
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Gas Category</label>
-                                            <CustomDropdown
-                                                value={item.gasCategory || ''}
-                                                onChange={val => updateItem(item.id, 'CYLINDERS', 'gasCategory', val)}
-                                                placeholder="Select Category"
-                                                options={gasCategories.map(c => ({ value: c.name, label: c.name }))}
-                                                className="w-full text-sm font-bold"
-                                            />
-                                        </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
                                         {/* Capacity */}
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Capacity / Weight</label>
@@ -1095,6 +1138,69 @@ const RenewalScreen = ({ onBack }) => {
                     </>
                 )}
 
+                {/* ── AMC VISITS TAB ── */}
+                {activeTab === 'AMC_VISITS' && (
+                    <>
+                        {amcVisits.length === 0 ? (
+                            <div className="py-16 text-center border-2 border-dashed border-gray-100 rounded-2xl text-gray-300">
+                                <Calendar size={32} className="mx-auto mb-3 opacity-20" />
+                                <p className="text-xs font-bold uppercase tracking-widest mb-4">No AMC Visits found for this client</p>
+                                <button onClick={addNewAmcVisit} className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg">
+                                    <Plus size={14} /> Add New AMC Visit
+                                </button>
+                            </div>
+                        ) : (<>
+                            {amcVisits.map((item, idx) => (
+                                <div key={item.id} className="bg-gray-50 p-8 rounded-[2rem] mb-6 border border-gray-100 flex flex-col gap-6 hover:border-indigo-100 transition-all">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                            {item.isNew ? '✨ New Entry' : `Record #${idx + 1}`}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            {!item.isNew && (
+                                                <button
+                                                    onClick={() => handleViewServiceDetails(item.id)}
+                                                    className="flex items-center gap-1 px-2 py-1 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
+                                                >
+                                                    <Eye size={12} /> View Details
+                                                </button>
+                                            )}
+                                            <button onClick={() => removeItem(item.id, 'AMC_VISITS')} className="flex items-center gap-1 px-2 py-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all">
+                                                <Trash2 size={12} /> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {item.lastExpiry && (
+                                        <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl self-start">
+                                            <Calendar size={12} className="text-indigo-500" />
+                                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Previous Visit: {formatDate(toDateInput(item.lastExpiry))}</span>
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Visit Date</label>
+                                            <div className="relative">
+                                                <input type="date" value={item.visitDate} onChange={e => updateItem(item.id, 'AMC_VISITS', 'visitDate', e.target.value)}
+                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><PenTool size={12} /> Visit Notes</label>
+                                            <textarea value={item.notes} onChange={e => updateItem(item.id, 'AMC_VISITS', 'notes', e.target.value)}
+                                                placeholder="Details about the standard visit…" className="w-full bg-white rounded-xl px-4 py-3 text-sm font-medium outline-none border border-gray-100 h-20 resize-none shadow-sm text-gray-900" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <button onClick={addNewAmcVisit} className="w-full py-4 border-2 border-dashed border-indigo-200 rounded-2xl text-indigo-500 font-bold text-xs uppercase tracking-widest hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2">
+                                <Plus size={16} /> Add New AMC Visit
+                            </button>
+                        </>
+                        )}
+                    </>
+                )}
+
                 {/* ── Section Save Button ── */}
                 <div className="mt-2 mb-4">
                     {activeTab === 'CYLINDERS' && cylinders.length > 0 && (
@@ -1115,12 +1221,18 @@ const RenewalScreen = ({ onBack }) => {
                             {amcsSaved ? <><Check size={18} /> AMC Saved!</> : savingSection === 'AMC' ? 'Saving…' : 'Save AMC Contracts'}
                         </button>
                     )}
+                    {activeTab === 'AMC_VISITS' && amcVisits.length > 0 && (
+                        <button onClick={handleSaveAmcVisits} disabled={savingSection !== null || amcVisitsSaved}
+                            className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-widest text-sm flex items-center justify-center gap-3 ${amcVisitsSaved ? 'bg-green-500 text-white cursor-default' : 'bg-[#0f172a] hover:bg-slate-800 text-white'} ${savingSection === 'AMC_VISITS' ? 'opacity-70 cursor-wait' : ''}`}>
+                            {amcVisitsSaved ? <><Check size={18} /> AMC Visits Saved!</> : savingSection === 'AMC_VISITS' ? 'Saving…' : 'Save AMC Visits'}
+                        </button>
+                    )}
                 </div>
 
                 {/* ── Finish Button ── */}
-                <button onClick={handleFinish} disabled={!(cylindersSaved || nocsSaved || amcsSaved)}
-                    className={`w-full font-bold py-5 rounded-2xl shadow-xl transition-all active:scale-[0.99] uppercase tracking-widest text-sm ${(cylindersSaved || nocsSaved || amcsSaved) ? 'bg-[#ef4444] hover:bg-red-600 text-white shadow-red-500/20' : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'}`}>
-                    {(cylindersSaved || nocsSaved || amcsSaved) ? '✓ Finish Renewal & View Certificate' : 'Save Sections Above to Finish'}
+                <button onClick={handleFinish} disabled={!(cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved)}
+                    className={`w-full font-bold py-5 rounded-2xl shadow-xl transition-all active:scale-[0.99] uppercase tracking-widest text-sm ${(cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved) ? 'bg-[#ef4444] hover:bg-red-600 text-white shadow-red-500/20' : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'}`}>
+                    {(cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved) ? '✓ Finish Renewal & View Certificate' : 'Save Sections Above to Finish'}
                 </button>
             </div>
 
