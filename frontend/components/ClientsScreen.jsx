@@ -39,7 +39,6 @@ import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
-import apiClient from '../api/api';
 import { downloadClientDirectory } from '../api/client.js';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
@@ -550,7 +549,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
             </div>
 
             {/* Collapsible Filters & Actions */}
-            <div className={`flex-col gap-4 mb-6 ${showMobileFilters ? 'flex' : 'hidden lg:flex'} sticky top-0 bg-gray-50 z-30 pt-4 pb-4 -mx-4 px-4 sm:px-6`}>
+            <div className={`flex-col gap-4 mb-6 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
                 {/* Actions */}
                 <div className="flex justify-end">
                     <div className="flex flex-wrap gap-3">

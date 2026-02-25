@@ -661,7 +661,6 @@ const RenewalScreen = ({ onBack }) => {
                 </button>
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-[#0f172a]">Service Renewal</h1>
-                    <p className="text-xs text-gray-400 font-medium mt-0.5 uppercase tracking-widest">{client?.firmName}</p>
                 </div>
                 <button onClick={onBack} className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm transition-all" title="Cancel renewal">
                     <X size={20} />
@@ -756,7 +755,7 @@ const RenewalScreen = ({ onBack }) => {
                                     {/* Last expiry badge */}
                                     {item.lastExpiry && (
                                         <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-xl self-start">
-                                            <Calendar size={12} className="text-orange-500" />
+                                            <Calendar size={14} className="text-orange-500" />
                                             <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Previous Expiry: {formatDate(toDateInput(item.lastExpiry))}</span>
                                         </div>
                                     )}
@@ -807,19 +806,18 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Service Date</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.startDate} onChange={e => updateItem(item.id, 'CYLINDERS', 'startDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                             </div>
                                         </div>
                                         {/* Renewal Date */}
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Renewal Target</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.renewalDate} onChange={e => updateItem(item.id, 'CYLINDERS', 'renewalDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
 
                                             </div>
                                         </div>
@@ -942,18 +940,18 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Start Date</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.startDate} onChange={e => updateItem(item.id, 'NOC', 'startDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
 
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Expiry Date</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.expiry} onChange={e => updateItem(item.id, 'NOC', 'expiry', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
 
                                             </div>
                                         </div>
@@ -1075,18 +1073,18 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Start Date</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.startDate} onChange={e => updateItem(item.id, 'AMC', 'startDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
 
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Expiry Date</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.expiry} onChange={e => updateItem(item.id, 'AMC', 'expiry', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
 
                                             </div>
                                         </div>
@@ -1190,9 +1188,9 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Visit Date</label>
                                             <div className="relative">
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={16} />
+                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/4 text-gray-400 pointer-events-none z-10" size={16} />
                                                 <input type="date" value={item.visitDate} onChange={e => updateItem(item.id, 'AMC_VISITS', 'visitDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+                                                    className="w-full bg-white rounded-xl pl-4 pr-11 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
 
                                             </div>
                                         </div>

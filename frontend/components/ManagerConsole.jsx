@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, Filter, MessageCircle, AlertCircle, Clock, CheckSquare, Square, X, Loader2 } from 'lucide-react';
-import api from '../api/api.js';
 import CustomDropdown from './CustomDropdown.jsx';
 import { getAllCylinders } from '../api/fireExtinguisher.js';
 import { getAllNOCs } from '../api/fireNoc.js';
@@ -180,7 +179,7 @@ const ManagerConsole = () => {
     };
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col relative">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-full flex flex-col relative">
             {/* Header Section */}
             <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
@@ -231,9 +230,9 @@ const ManagerConsole = () => {
                 </div>
             </div>
 
-            <div className="flex flex-1 min-h-0">
+            <div className="flex flex-col mb-12">
                 {/* Main List Area */}
-                <div className="flex-1 overflow-y-auto pr-2">
+                <div className="w-full">
                     {/* List Controls */}
                     <div className="flex items-center justify-between mb-4 px-1">
                         <div className="flex items-center flex-wrap gap-4">

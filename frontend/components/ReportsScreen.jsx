@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef } from 'react';
 import { BarChart3, Download, FileText, Search, Calendar, Box, ExternalLink, X, RefreshCw, ShieldCheck, AlertCircle, Filter } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchClients } from '../store/slices/clientSlice';
-import apiClient from '../api/api';
 import CustomDropdown from './CustomDropdown.jsx';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { downloadCylinderReport } from '../api/fireExtinguisher.js';
@@ -265,7 +264,7 @@ const ReportsScreen = () => {
             </div>
 
             {/* Collapsible Filters & Actions */}
-            <div className={`flex-col gap-6 mb-8 ${showMobileFilters ? 'flex' : 'hidden lg:flex'} sticky top-0 bg-gray-50 z-30 pt-4 pb-4 -mx-4 px-4 sm:px-6`}>
+            <div className={`flex-col gap-6 mb-8 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
                 <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between w-full">
                     <div className="flex flex-col gap-1 w-full md:w-auto">
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -280,7 +279,7 @@ const ReportsScreen = () => {
                                     onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value ? new Date(e.target.value) : null }))}
                                 />
                                 <Calendar
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 cursor-pointer hover:text-blue-500 transition-colors z-20"
+                                    className="absolute right-3 top-1/2 -translate-y-1/4 text-gray-300 cursor-pointer hover:text-blue-500 transition-colors z-20"
                                     size={14}
                                     onClick={() => startDateRef.current?.showPicker()}
                                 />
@@ -296,7 +295,7 @@ const ReportsScreen = () => {
                                     onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value ? new Date(e.target.value) : null }))}
                                 />
                                 <Calendar
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 cursor-pointer hover:text-blue-500 transition-colors z-20"
+                                    className="absolute right-3 top-1/2 -translate-y-1/4 text-gray-300 cursor-pointer hover:text-blue-500 transition-colors z-20"
                                     size={14}
                                     onClick={() => endDateRef.current?.showPicker()}
                                 />
