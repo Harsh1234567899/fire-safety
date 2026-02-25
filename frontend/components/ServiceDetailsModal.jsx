@@ -291,24 +291,19 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
 
                                                     return (
 
-                                                        <div key={idx} className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                                                                        <FileText size={20} />
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[250px]">{filename}</p>
-                                                                        {!isString && doc.createdAt && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Added: {formatDate(doc.createdAt)}</p>}
-                                                                    </div>
+                                                        <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
+                                                                    <FileText size={20} />
                                                                 </div>
-                                                                <a href={url} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
-                                                                    Open <ExternalLink size={14} />
-                                                                </a>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-none">{filename}</p>
+                                                                    {!isString && doc.createdAt && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Added: {formatDate(doc.createdAt)}</p>}
+                                                                </div>
                                                             </div>
-
-
-
+                                                            <a href={url} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 self-end sm:self-auto shrink-0">
+                                                                Open <ExternalLink size={14} />
+                                                            </a>
                                                         </div>
                                                     )
                                                 })}
@@ -347,7 +342,7 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

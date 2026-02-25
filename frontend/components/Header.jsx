@@ -75,13 +75,6 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
                 >
                     <Menu size={24} />
                 </button>
-                {/* Mobile Search Toggle (Moved left to avoid OS overlays) */}
-                <button
-                    onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                    className={`md:hidden p-2 rounded-xl transition-all shrink-0 ${isMobileSearchOpen ? 'bg-red-50 text-red-600' : 'text-gray-500 hover:bg-gray-100'}`}
-                >
-                    {isMobileSearchOpen ? <X size={20} /> : <Search size={20} />}
-                </button>
             </div>
 
             {/* Global Search Bar (Desktop) */}
@@ -215,6 +208,14 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
             )}
 
             <div className="flex items-center gap-2 sm:gap-6 ml-auto">
+                {/* Mobile Search Toggle */}
+                <button
+                    onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                    className={`md:hidden p-2 rounded-xl transition-all shrink-0 ${isMobileSearchOpen ? 'bg-red-50 text-red-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                    {isMobileSearchOpen ? <X size={20} /> : <Search size={20} />}
+                </button>
+
                 {/* Notifications Bell */}
                 <div className="relative" ref={notificationRef}>
                     <button

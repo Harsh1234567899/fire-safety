@@ -381,7 +381,7 @@ const ReportsScreen = () => {
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw]">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw] min-h-[500px] md:min-h-[calc(100vh-320px)]">
                 <div className="overflow-auto custom-scrollbar">
                     <div className="min-w-[1000px]">
                         {/* Table Header */}
