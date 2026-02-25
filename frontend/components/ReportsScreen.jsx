@@ -382,102 +382,104 @@ const ReportsScreen = () => {
 
             {/* Table Container */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw]">
-                <div className="overflow-x-auto custom-scrollbar">
-                    {/* Table Header */}
-                    <div className="min-w-[1000px] grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center">
-                        <div className="col-span-1">
-                            <input
-                                type="checkbox"
-                                checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
-                                onChange={toggleSelectAll}
-                                className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                            />
+                <div className="overflow-auto custom-scrollbar">
+                    <div className="min-w-[1000px]">
+                        {/* Table Header */}
+                        <div className="grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center">
+                            <div className="col-span-1">
+                                <input
+                                    type="checkbox"
+                                    checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
+                                    onChange={toggleSelectAll}
+                                    className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                />
+                            </div>
+                            <div className="col-span-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Corporate Identity</div>
+                            <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asset / Service</div>
+                            <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</div>
+                            <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Qty</div>
+                            <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Renewal Date</div>
+                            <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Risk Profile</div>
+                            <div className="col-span-1 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Action</div>
                         </div>
-                        <div className="col-span-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Corporate Identity</div>
-                        <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asset / Service</div>
-                        <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</div>
-                        <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Qty</div>
-                        <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Renewal Date</div>
-                        <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Risk Profile</div>
-                        <div className="col-span-1 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Action</div>
-                    </div>
 
-                    {/* Table Body */}
-                    <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
-                        {filteredItems.map((item) => (
-                            <div
-                                key={item.id}
-                                className={`min-w-[1000px] grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 items-center transition-colors group ${selectedIds.has(item.id) ? 'bg-red-50/30' : 'hover:bg-gray-50/50'}`}
-                            >
-                                {/* Checkbox */}
-                                <div className="col-span-1">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedIds.has(item.id)}
-                                        onChange={() => toggleSelectItem(item.id)}
-                                        className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                    />
-                                </div>
-
-                                {/* Identity */}
-                                <div className="col-span-3">
-                                    <h4 className="text-sm font-bold text-gray-900 mb-0.5">{item.firmName}</h4>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.contactName}</p>
-                                </div>
-
-                                {/* Asset/Service */}
-                                <div className="col-span-2 flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.assetType === 'NOC' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
-                                        {item.assetType === 'NOC' ? <FileText size={16} /> : <Box size={16} />}
+                        {/* Table Body */}
+                        <div className="divide-y divide-gray-50">
+                            {filteredItems.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 items-center transition-colors group ${selectedIds.has(item.id) ? 'bg-red-50/30' : 'hover:bg-gray-50/50'}`}
+                                >
+                                    {/* Checkbox */}
+                                    <div className="col-span-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.has(item.id)}
+                                            onChange={() => toggleSelectItem(item.id)}
+                                            className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                        />
                                     </div>
-                                    <span className="text-xs font-bold text-gray-700 truncate">{item.assetName}</span>
-                                </div>
 
-                                {/* Location */}
-                                <div className="col-span-2">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{item.location}</span>
-                                </div>
+                                    {/* Identity */}
+                                    <div className="col-span-3">
+                                        <h4 className="text-sm font-bold text-gray-900 mb-0.5">{item.firmName}</h4>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.contactName}</p>
+                                    </div>
 
-                                {/* Quantity */}
-                                <div className="col-span-1">
-                                    <span className="text-xs font-bold text-gray-900">{item.quantity || '-'}</span>
-                                </div>
+                                    {/* Asset/Service */}
+                                    <div className="col-span-2 flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.assetType === 'NOC' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
+                                            {item.assetType === 'NOC' ? <FileText size={16} /> : <Box size={16} />}
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-700 truncate">{item.assetName}</span>
+                                    </div>
 
-                                {/* Renewal Date */}
-                                <div className="col-span-1 flex items-center gap-2">
-                                    <Calendar size={14} className="text-gray-300" />
-                                    <span className="text-xs font-bold text-gray-600 tabular-nums">{item.renewalDate}</span>
-                                </div>
+                                    {/* Location */}
+                                    <div className="col-span-2">
+                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{item.location}</span>
+                                    </div>
 
-                                {/* Status */}
-                                <div className="col-span-1">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${item.status === 'ACTIVE'
-                                        ? 'bg-green-50 text-green-600 border-green-100'
-                                        : 'bg-red-50 text-red-600 border-red-100'
-                                        }`}>
-                                        {item.status === 'ACTIVE' ? <ShieldCheck size={12} /> : <AlertCircle size={12} />}
-                                        {item.status}
-                                    </span>
-                                </div>
+                                    {/* Quantity */}
+                                    <div className="col-span-1">
+                                        <span className="text-xs font-bold text-gray-900">{item.quantity || '-'}</span>
+                                    </div>
 
-                                {/* Action */}
-                                <div className="col-span-1 text-right">
-                                    <button
-                                        onClick={() => handleViewDetails(item)}
-                                        className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                    >
-                                        <ExternalLink size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                                    {/* Renewal Date */}
+                                    <div className="col-span-1 flex items-center gap-2">
+                                        <Calendar size={14} className="text-gray-300" />
+                                        <span className="text-xs font-bold text-gray-600 tabular-nums">{item.renewalDate}</span>
+                                    </div>
 
-                        {filteredItems.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                                <Search size={48} className="mb-4 opacity-20" />
-                                <p>No records found matching your filters.</p>
-                            </div>
-                        )}
+                                    {/* Status */}
+                                    <div className="col-span-1">
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${item.status === 'ACTIVE'
+                                            ? 'bg-green-50 text-green-600 border-green-100'
+                                            : 'bg-red-50 text-red-600 border-red-100'
+                                            }`}>
+                                            {item.status === 'ACTIVE' ? <ShieldCheck size={12} /> : <AlertCircle size={12} />}
+                                            {item.status}
+                                        </span>
+                                    </div>
+
+                                    {/* Action */}
+                                    <div className="col-span-1 text-right">
+                                        <button
+                                            onClick={() => handleViewDetails(item)}
+                                            className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                        >
+                                            <ExternalLink size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {filteredItems.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                    <Search size={48} className="mb-4 opacity-20" />
+                                    <p>No records found matching your filters.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

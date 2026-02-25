@@ -803,18 +803,20 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Service Date</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.startDate} onChange={e => updateItem(item.id, 'CYLINDERS', 'startDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
                                         {/* Renewal Date */}
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Renewal Target</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.renewalDate} onChange={e => updateItem(item.id, 'CYLINDERS', 'renewalDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
                                     </div>
@@ -936,17 +938,19 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Start Date</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.startDate} onChange={e => updateItem(item.id, 'NOC', 'startDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Expiry Date</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.expiry} onChange={e => updateItem(item.id, 'NOC', 'expiry', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
                                     </div>
@@ -968,15 +972,15 @@ const RenewalScreen = ({ onBack }) => {
                                             </div>
                                         )}
                                         {item.attachedFiles.length > 0 ? item.attachedFiles.map((f, fi) => (
-                                            <div key={f._id || fi} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-500 shadow-sm"><File size={16} /></div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-900 truncate max-w-[200px]">{f.name}</p>
+                                            <div key={f._id || fi} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 group">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-500 shadow-sm shrink-0"><File size={16} /></div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">{f.name}</p>
                                                         {f.size > 0 && <p className="text-[9px] text-gray-400 uppercase">{(f.size / 1024).toFixed(1)} KB</p>}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                                                     {f.url && (
                                                         <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 p-1" title="View document">
                                                             <Eye size={14} />
@@ -1067,17 +1071,19 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Start Date</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.startDate} onChange={e => updateItem(item.id, 'AMC', 'startDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">New Expiry Date</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.expiry} onChange={e => updateItem(item.id, 'AMC', 'expiry', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
 
@@ -1100,15 +1106,15 @@ const RenewalScreen = ({ onBack }) => {
                                             </div>
                                         )}
                                         {item.attachedFiles.length > 0 ? item.attachedFiles.map((f, fi) => (
-                                            <div key={f._id || fi} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-purple-500 shadow-sm"><File size={16} /></div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-900 truncate max-w-[200px]">{f.name}</p>
+                                            <div key={f._id || fi} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 group">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-purple-500 shadow-sm shrink-0"><File size={16} /></div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">{f.name}</p>
                                                         {f.size > 0 && <p className="text-[9px] text-gray-400 uppercase">{(f.size / 1024).toFixed(1)} KB</p>}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                                                     {f.url && (
                                                         <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:text-purple-700 p-1" title="View document">
                                                             <Eye size={14} />
@@ -1180,9 +1186,10 @@ const RenewalScreen = ({ onBack }) => {
                                         <div>
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Visit Date</label>
                                             <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
                                                 <input type="date" value={item.visitDate} onChange={e => updateItem(item.id, 'AMC_VISITS', 'visitDate', e.target.value)}
-                                                    className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                                    className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
+
                                             </div>
                                         </div>
                                         <div>

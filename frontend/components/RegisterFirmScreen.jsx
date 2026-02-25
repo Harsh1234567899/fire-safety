@@ -900,15 +900,15 @@ const RegisterFirmScreen = ({ onRegister }) => {
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Service Date</label>
                                         <div className="relative">
-                                            <input type="date" value={item.startDate} onChange={(e) => updateItem(item.id, 'CYLINDERS', 'startDate', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                                            <input type="date" value={item.startDate} onChange={(e) => updateItem(item.id, 'CYLINDERS', 'startDate', e.target.value)} className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                         </div>
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Renewal Target</label>
                                         <div className="relative">
-                                            <input type="date" value={item.renewalDate} onChange={(e) => updateItem(item.id, 'CYLINDERS', 'renewalDate', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                                            <input type="date" value={item.renewalDate} onChange={(e) => updateItem(item.id, 'CYLINDERS', 'renewalDate', e.target.value)} className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                         </div>
                                     </div>
                                 </div>
@@ -1017,15 +1017,15 @@ const RegisterFirmScreen = ({ onRegister }) => {
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Start Date</label>
                                         <div className="relative">
-                                            <input type="date" value={item.startDate} onChange={(e) => updateItem(item.id, 'NOC', 'startDate', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                                            <input type="date" value={item.startDate} onChange={(e) => updateItem(item.id, 'NOC', 'startDate', e.target.value)} className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                         </div>
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Renewal Target (Expiry)</label>
                                         <div className="relative">
-                                            <input type="date" value={item.expiry} onChange={(e) => updateItem(item.id, 'NOC', 'expiry', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                                            <input type="date" value={item.expiry} onChange={(e) => updateItem(item.id, 'NOC', 'expiry', e.target.value)} className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                         </div>
                                     </div>
                                 </div>
@@ -1052,19 +1052,19 @@ const RegisterFirmScreen = ({ onRegister }) => {
 
                                     <div className="space-y-2">
                                         {item.attachedFiles.length > 0 ? item.attachedFiles.map((file, fIdx) => (
-                                            <div key={fIdx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 group/file">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-500 shadow-sm">
+                                            <div key={fIdx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group/file">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-500 shadow-sm shrink-0">
                                                         <File size={16} />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-700 truncate max-w-[200px] text-gray-900">{file.name}</p>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-bold text-gray-700 truncate max-w-[200px] sm:max-w-none text-gray-900">{file.name}</p>
                                                         <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
                                                     </div>
                                                 </div>
                                                 <button
                                                     onClick={() => removeFile(item.id, file.name, 'NOC')}
-                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1 self-end sm:self-auto shrink-0"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -1119,15 +1119,15 @@ const RegisterFirmScreen = ({ onRegister }) => {
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Start Date</label>
                                         <div className="relative">
-                                            <input type="date" value={item.startDate} onChange={(e) => updateItem(item.id, 'AMC', 'startDate', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                                            <input type="date" value={item.startDate} onChange={(e) => updateItem(item.id, 'AMC', 'startDate', e.target.value)} className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                         </div>
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Renewal Target (Expiry)</label>
                                         <div className="relative">
-                                            <input type="date" value={item.expiry} onChange={(e) => updateItem(item.id, 'AMC', 'expiry', e.target.value)} className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                                            <input type="date" value={item.expiry} onChange={(e) => updateItem(item.id, 'AMC', 'expiry', e.target.value)} className="w-full bg-white rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-gray-100 shadow-sm text-gray-900" />
                                         </div>
                                     </div>
 
@@ -1155,19 +1155,19 @@ const RegisterFirmScreen = ({ onRegister }) => {
 
                                     <div className="space-y-2">
                                         {item.attachedFiles.length > 0 ? item.attachedFiles.map((file, fIdx) => (
-                                            <div key={fIdx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 group/file">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-purple-500 shadow-sm">
+                                            <div key={fIdx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group/file">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-purple-500 shadow-sm shrink-0">
                                                         <File size={16} />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-700 truncate max-w-[200px] text-gray-900">{file.name}</p>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-bold text-gray-700 truncate max-w-[200px] sm:max-w-none text-gray-900">{file.name}</p>
                                                         <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest">{(file.size / 1024).toFixed(1)} KB</p>
                                                     </div>
                                                 </div>
                                                 <button
                                                     onClick={() => removeFile(item.id, file.name, 'AMC')}
-                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1 self-end sm:self-auto shrink-0"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
