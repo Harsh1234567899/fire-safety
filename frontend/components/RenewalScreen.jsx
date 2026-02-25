@@ -671,17 +671,21 @@ const RenewalScreen = ({ onBack }) => {
             <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-gray-100 flex-1 overflow-y-auto max-w-[100vw] overflow-x-hidden">
                 {/* ── Client Info Card (read-only) ── */}
                 <div className="bg-gray-50 rounded-2xl p-6 mb-10 border border-gray-100">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-[#0f172a] rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                    <div className="flex justify-end mb-4">
+                        <span className="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                            Profile Verified ✓
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 shrink-0 bg-[#0f172a] rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm">
                             {(client?.firmName || '?')[0].toUpperCase()}
                         </div>
-                        <div>
-                            <h3 className="font-bold text-gray-900 text-sm">{client?.firmName}</h3>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Existing Client — No changes to profile</p>
+                        <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 text-base truncate">{client?.firmName}</h3>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 truncate">Existing Client — No changes to profile</p>
                         </div>
-                        <span className="ml-auto bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Profile Verified ✓</span>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs mt-4">
                         {[
                             { icon: User, label: 'Contact', value: client?.contactPerson || client?.contactName },
                             { icon: Phone, label: 'Mobile', value: client?.contactNumber || client?.mobile },
@@ -700,7 +704,7 @@ const RenewalScreen = ({ onBack }) => {
                 </div>
 
                 {/* ── Tabs ── */}
-                <div className="flex items-center gap-2 mb-6">
+                <div className="flex items-center gap-2 mb-6 overflow-x-auto custom-scrollbar pb-2">
                     {['CYLINDERS', 'NOC', 'AMC', 'AMC_VISITS'].map(tab => (
                         <button
                             key={tab}

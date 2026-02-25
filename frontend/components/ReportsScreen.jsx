@@ -229,7 +229,7 @@ const ReportsScreen = () => {
     };
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col relative">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-full flex flex-col relative">
             {/* Header Section */}
             <div className="mb-8 flex justify-between items-start gap-4">
                 <div>
@@ -265,7 +265,7 @@ const ReportsScreen = () => {
             </div>
 
             {/* Collapsible Filters & Actions */}
-            <div className={`flex-col gap-6 mb-8 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`flex-col gap-6 mb-8 ${showMobileFilters ? 'flex' : 'hidden lg:flex'} sticky top-0 bg-gray-50 z-30 pt-4 pb-4 -mx-4 px-4 sm:px-6`}>
                 <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between w-full">
                     <div className="flex flex-col gap-1 w-full md:w-auto">
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -381,8 +381,8 @@ const ReportsScreen = () => {
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw] min-h-[500px] md:min-h-[calc(100vh-320px)]">
-                <div className="overflow-auto custom-scrollbar">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw]">
+                <div className="overflow-x-auto custom-scrollbar">
                     <div className="min-w-[1000px]">
                         {/* Table Header */}
                         <div className="grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center">

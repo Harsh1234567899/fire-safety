@@ -519,7 +519,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     }
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-full flex flex-col">
             <div className="mb-6 flex justify-between items-start gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-1">Firm Directory</h1>
@@ -550,7 +550,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
             </div>
 
             {/* Collapsible Filters & Actions */}
-            <div className={`flex-col gap-4 mb-4 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
+            <div className={`flex-col gap-4 mb-6 ${showMobileFilters ? 'flex' : 'hidden lg:flex'} sticky top-0 bg-gray-50 z-30 pt-4 pb-4 -mx-4 px-4 sm:px-6`}>
                 {/* Actions */}
                 <div className="flex justify-end">
                     <div className="flex flex-wrap gap-3">
@@ -634,8 +634,8 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
             </div>
 
             {/* Advanced Table */}
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex flex-col overflow-hidden w-full max-w-[100vw] min-h-[500px] md:min-h-[calc(100vh-320px)]">
-                <div className="overflow-auto h-full custom-scrollbar">
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw]">
+                <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>

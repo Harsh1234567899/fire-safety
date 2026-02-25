@@ -66,7 +66,7 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
     };
 
     return (
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between pl-4 pr-16 sm:px-8 sticky top-0 z-50 gap-4">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-50 gap-4">
             <div className="flex items-center gap-2">
                 {/* Mobile Menu Toggle */}
                 <button
