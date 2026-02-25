@@ -68,7 +68,7 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                     <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isNoc ? 'bg-blue-50 text-blue-500' :
                             isAmc ? 'bg-purple-50 text-purple-500' :
@@ -91,7 +91,7 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 sm:space-y-8">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                             <Clock className="animate-spin mb-3" size={24} />
@@ -297,8 +297,8 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                                                                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
                                                                         <FileText size={20} />
                                                                     </div>
-                                                                    <div>
-                                                                        <p className="text-sm font-bold text-gray-900 truncate max-w-[250px]">{filename}</p>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-sm font-bold text-gray-900 truncate max-w-[200px] md:max-w-[250px]">{filename}</p>
                                                                         {!isString && doc.createdAt && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Added: {formatDate(doc.createdAt)}</p>}
                                                                     </div>
                                                                 </div>
@@ -341,7 +341,7 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-6 border-t border-gray-100 flex justify-end bg-gray-50/50">
+                <div className="px-6 py-5 sm:px-8 sm:py-6 border-t border-gray-100 flex justify-end bg-gray-50/50">
                     <button onClick={onClose} className="px-6 py-2.5 bg-[#0f172a] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all hover:bg-slate-800 shadow-lg active:scale-95">
                         Close Details
                     </button>

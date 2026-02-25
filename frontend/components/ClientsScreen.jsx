@@ -634,7 +634,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
             </div>
 
             {/* Advanced Table */}
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex flex-col overflow-visible">
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm flex flex-col overflow-hidden w-full max-w-[100vw]">
                 <div className="overflow-auto h-full custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-gray-50 sticky top-0 z-10">

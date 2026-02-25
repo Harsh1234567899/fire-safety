@@ -740,7 +740,7 @@ const RegisterFirmScreen = ({ onRegister }) => {
                     <h1 className="text-3xl font-bold text-[#0f172a]">Registration</h1>
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-gray-100 flex-1 overflow-y-auto">
+                <div className="bg-white rounded-[2.5rem] p-6 lg:p-12 shadow-sm border border-gray-100 flex-1 overflow-y-auto w-full max-w-[100vw] overflow-x-hidden">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                         {/* Firm Name */}
                         <div className="md:col-span-2">

@@ -553,7 +553,7 @@ const RenewalScreen = ({ onBack }) => {
                     <h1 className="text-3xl font-bold text-[#0f172a]">Service Renewal</h1>
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] p-12 shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] p-6 md:p-12 shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden max-w-[100vw]">
                     <p className="text-gray-500 mb-6 font-medium">Search for an existing client to load all historical service data for renewal.</p>
 
                     <div className="group flex items-center bg-gray-50 border border-transparent focus-within:bg-white focus-within:border-red-200 rounded-2xl px-5 py-4 shadow-sm transition-all mb-8">
@@ -620,7 +620,7 @@ const RenewalScreen = ({ onBack }) => {
     if (view === 'DONE') {
         return (
             <div className="animate-in fade-in zoom-in-95 duration-500 h-full flex flex-col max-w-4xl mx-auto py-8">
-                <div className="bg-white rounded-[2.5rem] p-12 shadow-2xl border border-gray-100 flex flex-col items-center text-center h-full justify-center">
+                <div className="bg-white rounded-[2.5rem] p-6 md:p-12 shadow-2xl border border-gray-100 flex flex-col items-center text-center h-full justify-center max-w-[100vw]">
                     <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-white mb-8 shadow-xl shadow-green-200">
                         <CheckCircle size={48} />
                     </div>
@@ -668,7 +668,7 @@ const RenewalScreen = ({ onBack }) => {
                 </button>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100 flex-1 overflow-y-auto">
+            <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-gray-100 flex-1 overflow-y-auto max-w-[100vw] overflow-x-hidden">
                 {/* ── Client Info Card (read-only) ── */}
                 <div className="bg-gray-50 rounded-2xl p-6 mb-10 border border-gray-100">
                     <div className="flex items-center gap-3 mb-4">
@@ -729,7 +729,7 @@ const RenewalScreen = ({ onBack }) => {
                             </div>
                         ) : (<>
                             {cylinders.map((item, idx) => (
-                                <div key={item.id} className="bg-gray-50 p-8 rounded-[2rem] mb-6 border border-gray-100 flex flex-col gap-6 hover:border-orange-100 transition-all">
+                                <div key={item.id} className="bg-gray-50 p-5 md:p-8 rounded-[2rem] mb-6 border border-gray-100 flex flex-col gap-6 hover:border-orange-100 transition-all">
                                     <div className="flex items-center justify-between">
                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                             {item.isNew ? '✨ New Entry' : `Record #${idx + 1}`}

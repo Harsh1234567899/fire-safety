@@ -194,38 +194,40 @@ const ManagerConsole = () => {
             </div>
 
             {/* Filter Bar */}
-            <div className="flex items-center gap-3 mb-6">
-                <div className="flex-1 bg-white rounded-xl border border-gray-200 px-4 py-2.5 flex items-center gap-3">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-6">
+                <div className="flex-1 bg-white rounded-xl border border-gray-200 px-4 py-2.5 flex items-center gap-3 min-w-0">
                     <Search className="text-gray-400 flex-shrink-0" size={16} />
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Search Firm, Contact or Location..."
-                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 placeholder:text-gray-400"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 placeholder:text-gray-400 min-w-0"
                     />
                 </div>
 
-                {/* Location Dropdown */}
-                <div className="flex-shrink-0 min-w-[160px]">
-                    <CustomDropdown
-                        value={locationFilter}
-                        onChange={setLocationFilter}
-                        options={locations}
-                        icon={MapPin}
-                        className="text-xs font-semibold uppercase tracking-wide"
-                    />
-                </div>
+                <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar w-full md:w-auto">
+                    {/* Location Dropdown */}
+                    <div className="flex-shrink-0 flex-1 md:flex-none md:min-w-[160px]">
+                        <CustomDropdown
+                            value={locationFilter}
+                            onChange={setLocationFilter}
+                            options={locations}
+                            icon={MapPin}
+                            className="text-xs font-semibold uppercase tracking-wide"
+                        />
+                    </div>
 
-                {/* Urgency Dropdown */}
-                <div className="flex-shrink-0 min-w-[160px]">
-                    <CustomDropdown
-                        value={urgencyFilter}
-                        onChange={setUrgencyFilter}
-                        options={urgencies}
-                        icon={Filter}
-                        className="text-xs font-semibold uppercase tracking-wide"
-                    />
+                    {/* Urgency Dropdown */}
+                    <div className="flex-shrink-0 flex-1 md:flex-none md:min-w-[160px]">
+                        <CustomDropdown
+                            value={urgencyFilter}
+                            onChange={setUrgencyFilter}
+                            options={urgencies}
+                            icon={Filter}
+                            className="text-xs font-semibold uppercase tracking-wide w-full"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -311,9 +313,9 @@ const ManagerConsole = () => {
                                             </div>
 
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1 gap-2">
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-1 gap-3 sm:gap-2">
                                                     <div className="flex items-center gap-2 flex-wrap min-w-0">
-                                                        <h3 className="text-base font-bold text-gray-900 truncate">{item.firmName}</h3>
+                                                        <h3 className="text-base font-bold text-gray-900 truncate max-w-[150px] sm:max-w-none">{item.firmName}</h3>
                                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${statusColor.badge}`}>
                                                             {item.status}
                                                         </span>
@@ -322,7 +324,7 @@ const ManagerConsole = () => {
                                                         </span>
                                                     </div>
                                                     <button
-                                                        className="bg-[#22c55e] hover:bg-[#16a34a] text-white px-4 py-2 rounded-full flex items-center gap-2 font-bold text-[11px] tracking-wide shadow-sm transition-all active:scale-95 flex-shrink-0"
+                                                        className="bg-[#22c55e] hover:bg-[#16a34a] text-white px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-full flex items-center justify-center gap-2 font-bold text-[11px] tracking-wide shadow-sm transition-all active:scale-95 flex-shrink-0 w-full sm:w-auto"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (item.phone) {

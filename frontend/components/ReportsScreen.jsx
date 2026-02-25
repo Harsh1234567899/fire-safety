@@ -381,8 +381,8 @@ const ReportsScreen = () => {
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-visible">
-                <div className="overflow-x-auto">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col mb-12 overflow-hidden w-full max-w-[100vw]">
+                <div className="overflow-x-auto custom-scrollbar">
                     {/* Table Header */}
                     <div className="min-w-[1000px] grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center">
                         <div className="col-span-1">
