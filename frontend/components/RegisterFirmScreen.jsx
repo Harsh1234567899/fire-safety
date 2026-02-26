@@ -39,13 +39,8 @@ const formatDateDisplay = (dateStr) => {
 const RegisterFirmScreen = ({ onRegister }) => {
     const { user } = useSelector(state => state.auth);
     const userRole = user?.role;
-    // Note: clients list for search is handled via API call in useEffect below, 
-    // or if we needed the full list we could use: const { items: clients } = useSelector(state => state.clients);
-    // But sticking to the local API search logic is fine or using global. 
-    // The previous code had: const results = clients.filter(...) OR API Search.
-    // I switched it to API Search in step 129. So 'clients' prop is unused for search now? Let's check.
-    // Ah, lines 52-64 show it uses searchClients API. So 'clients' prop is mostly unused EXCEPT maybe for initial load?
-    // Let's assume we don't need 'clients' prop anymore.
+    const { items: clients = [] } = useSelector(state => state.clients);
+
     const [view, setView, clearView] = usePersistedState('reg_view', 'SELECTION');
     const [activeTab, setActiveTab, clearActiveTab] = usePersistedState('reg_activeTab', 'CYLINDERS');
     const [globalSequence, setGlobalSequence] = useState(INITIAL_SEQUENCE);

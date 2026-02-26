@@ -152,12 +152,10 @@ const updateClient = asyncHandler(async (req, res) => {
     // 2️⃣ Authorization logic
     const user = req.user;
 
-    if (user.role === "manager") {
+    if (user.role === "manager" || user.role === "godown-manager") {
         if (!existingClient.createdBy.equals(user._id)) {
             throw new ApiError(403, "Managers can update only their own clients");
         }
-    } else if (user.role !== "admin") {
-        throw new ApiError(403, "You are not allowed to update clients");
     }
 
     const { firmName, gstNumber, contactPerson, contactNumber, email, address, city, pincode } = req.body;

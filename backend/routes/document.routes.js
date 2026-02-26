@@ -6,7 +6,7 @@ import { deleteDocument, getDocument, uploadDocument } from "../controllers/docu
 const router = Router()
 
 router.post('/upload', verifyJWT, upload.fields([{ name: "url", maxCount: 1 }]), uploadDocument)
-router.get('/get/:id', verifyJWT, authorize('admin', "manager"), getDocument)
-router.delete('/:id', verifyJWT, authorize('admin', "manager"), deleteDocument)
+router.get('/get/:id', verifyJWT, authorize('admin', "manager", "godown-manager"), getDocument)
+router.delete('/:id', verifyJWT, authorize('admin', "manager", "godown-manager"), deleteDocument)
 
 export default router

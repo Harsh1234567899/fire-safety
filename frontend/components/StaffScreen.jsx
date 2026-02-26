@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, ShieldCheck, CheckCircle, Trash2, UserPlus, ShieldAlert, X, Lock, Key, Mail, Hash, Loader } from 'lucide-react';
+import { Shield, ShieldCheck, CheckCircle, Trash2, UserPlus, ShieldAlert, X, Lock, Key, Mail, Hash, Loader, Edit } from 'lucide-react';
 import { getAllUsers } from '../api/user';
-import { registerUser, deleteUser } from '../api/auth';
+import { registerUser, deleteUser, updateUser, updatePassword } from '../api/auth';
+import { toast } from 'react-hot-toast';
 
 const StaffScreen = () => {
     const [staffMembers, setStaffMembers] = useState([]);
@@ -20,7 +21,7 @@ const StaffScreen = () => {
                     name: u.name,
                     email: u.email,
                     systemId: u.systemId,
-                    role: u.role.toUpperCase(), // Backend is lowercase
+                    role: u.role.toUpperCase(), // Map backend string to UI format
                     status: 'ACTIVE', // Default status as backend might not have it yet
                     initial: u.name.charAt(0).toUpperCase()
                 })) || [];
@@ -36,6 +37,7 @@ const StaffScreen = () => {
         fetchUsers();
     }, []);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingUserId, setEditingUserId] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -56,7 +58,8 @@ const StaffScreen = () => {
         }
     };
 
-    const openModal = () => {
+    const openCreateModal = () => {
+        setEditingUserId(null);
         setFormData({
             name: '',
             email: '',
@@ -67,40 +70,117 @@ const StaffScreen = () => {
         setIsModalOpen(true);
     };
 
+    const openEditModal = (member) => {
+        setEditingUserId(member.id);
+        setFormData({
+            name: member.name,
+            email: member.email,
+            systemId: member.systemId,
+            password: '',
+            role: member.role
+        });
+        setIsModalOpen(true);
+    };
+
     const handleSave = async () => {
-        if (!formData.name || !formData.email || !formData.systemId || !formData.password) {
-            alert('Please fill all mandatory credential fields.');
+        if (!formData.name || !formData.email || !formData.systemId || (!editingUserId && !formData.password)) {
+            toast.error('Please fill all mandatory credential fields.');
             return;
         }
 
-        try {
-            const payload = {
-                name: formData.name,
-                email: formData.email,
-                systemId: formData.systemId,
-                password: formData.password,
-                role: formData.role.toLowerCase()
-            };
-
-            const response = await registerUser(payload);
-            const createdUser = response.data?.data;
-
-            if (createdUser) {
-                const newMember = {
-                    id: createdUser._id,
-                    systemId: createdUser.systemId,
-                    name: createdUser.name,
-                    email: createdUser.email,
-                    role: createdUser.role.toUpperCase(),
-                    status: 'ACTIVE ACCESS',
-                    initial: createdUser.name.charAt(0).toUpperCase()
+        const executeUpdate = async () => {
+            try {
+                const payload = {
+                    name: formData.name,
+                    email: formData.email,
+                    systemId: formData.systemId,
+                    role: formData.role.toLowerCase()
                 };
-                setStaffMembers(prev => [...prev, newMember]);
-                setIsModalOpen(false);
+
+                if (editingUserId) {
+                    const response = await updateUser(editingUserId, payload);
+                    const updatedUser = response.data?.data;
+
+                    if (formData.password) {
+                        try {
+                            await updatePassword(editingUserId, { newPassword: formData.password });
+                        } catch (pwdErr) {
+                            console.error("Password update error full:", pwdErr);
+                            console.error("Password update error response:", pwdErr.response?.data);
+                            throw new Error("User details updated, but password update failed: " + (pwdErr.response?.data?.message || pwdErr.message));
+                        }
+                    }
+
+                    if (updatedUser) {
+                        setStaffMembers(prev => prev.map(m => m.id === editingUserId ? {
+                            ...m,
+                            name: updatedUser.name,
+                            email: updatedUser.email,
+                            systemId: updatedUser.systemId,
+                            role: updatedUser.role.toUpperCase(),
+                            initial: updatedUser.name.charAt(0).toUpperCase()
+                        } : m));
+                        setIsModalOpen(false);
+                        toast.success(formData.password ? "Account and password updated" : "Account updated successfully");
+                    }
+                } else {
+                    payload.password = formData.password;
+                    const response = await registerUser(payload);
+                    const createdUser = response.data?.data;
+
+                    if (createdUser) {
+                        const newMember = {
+                            id: createdUser._id,
+                            systemId: createdUser.systemId,
+                            name: createdUser.name,
+                            email: createdUser.email,
+                            role: createdUser.role.toUpperCase(),
+                            status: 'ACTIVE ACCESS',
+                            initial: createdUser.name.charAt(0).toUpperCase()
+                        };
+                        setStaffMembers(prev => [...prev, newMember]);
+                        setIsModalOpen(false);
+                        toast.success("Account created successfully");
+                    }
+                }
+            } catch (err) {
+                console.error(editingUserId ? "Failed to update user" : "Failed to create user", err);
+                toast.error((editingUserId ? err.message : "Failed to create user: " + (err.response?.data?.message || err.message)));
             }
-        } catch (err) {
-            console.error("Failed to create user", err);
-            alert("Failed to create user: " + (err.response?.data?.message || err.message));
+        };
+
+        if (editingUserId && formData.password) {
+            toast((t) => (
+                <div className="flex flex-col gap-3 p-1">
+                    <div className="flex items-center gap-2 text-red-600 font-bold">
+                        <ShieldAlert size={18} />
+                        Confirm Password Change
+                    </div>
+                    <p className="text-sm text-gray-700">
+                        You are about to change the password for <b>{formData.name}</b>.
+                        They will need to use the new password to log in. Proceed?
+                    </p>
+                    <div className="flex gap-2 justify-end mt-2">
+                        <button
+                            className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition-colors"
+                            onClick={() => toast.dismiss(t.id)}
+                        >
+                            CANCEL
+                        </button>
+                        <button
+                            className="px-3 py-1.5 text-xs bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold transition-colors"
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                executeUpdate();
+                            }}
+                        >
+                            UPDATE PASSWORD
+                        </button>
+                    </div>
+                </div>
+            ), { duration: Infinity });
+        } else {
+            executeUpdate();
         }
     };
 
@@ -129,7 +209,7 @@ const StaffScreen = () => {
                         <p className="text-gray-500">Provision and manage internal operational accounts.</p>
                     </div>
                     <button
-                        onClick={openModal}
+                        onClick={openCreateModal}
                         className="flex items-center justify-center sm:justify-start w-full sm:w-auto gap-2 bg-[#ef4444] hover:bg-red-600 text-white px-6 py-3 rounded-full font-bold transition-all shadow-xl shadow-red-500/20 active:scale-95 uppercase tracking-widest text-xs"
                     >
                         <UserPlus size={18} />
@@ -191,7 +271,14 @@ const StaffScreen = () => {
                                 <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">{member.status}</span>
                             </div>
 
-                            <div className="col-span-2 flex justify-end absolute right-4 top-4 lg:relative lg:right-0 lg:top-0">
+                            <div className="col-span-2 flex justify-end absolute right-4 top-4 lg:relative lg:right-0 lg:top-0 gap-2">
+                                <button
+                                    onClick={() => openEditModal(member)}
+                                    className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Edit Access"
+                                >
+                                    <Edit size={18} />
+                                </button>
                                 <button
                                     onClick={() => handleDelete(member.id)}
                                     className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -213,8 +300,8 @@ const StaffScreen = () => {
                     <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg p-10 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Account Provisioning</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Manual Credential Generation</p>
+                                <h3 className="text-xl font-bold text-gray-900">{editingUserId ? 'Edit Account' : 'Account Provisioning'}</h3>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{editingUserId ? 'Update User Details' : 'Manual Credential Generation'}</p>
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 bg-gray-50 text-gray-400 hover:text-gray-600 rounded-xl flex items-center justify-center transition-colors">
                                 <X size={20} />
@@ -265,7 +352,9 @@ const StaffScreen = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Password</label>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">
+                                            {editingUserId ? "New Password (Optional)" : "Password"}
+                                        </label>
                                         <div className="relative">
                                             <Key className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                                             <input
@@ -273,7 +362,7 @@ const StaffScreen = () => {
                                                 value={formData.password}
                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                                 className="w-full bg-white border border-slate-200 focus:border-red-400 rounded-xl pl-8 sm:pl-10 pr-4 py-3 text-sm font-bold outline-none transition-all"
-                                                placeholder="securePass123"
+                                                placeholder={editingUserId ? "Leave blank to keep" : "securePass123"}
                                             />
                                         </div>
                                     </div>
@@ -283,7 +372,7 @@ const StaffScreen = () => {
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1">Access Tier</label>
                                 <div className="grid grid-cols-3 gap-3">
-                                    {['ADMIN', 'MANAGER', 'GO DOWN MANAGER'].map((roleOption) => (
+                                    {['ADMIN', 'MANAGER', 'GODOWN-MANAGER'].map((roleOption) => (
                                         <div
                                             key={roleOption}
                                             onClick={() => setFormData({ ...formData, role: roleOption })}
@@ -306,7 +395,7 @@ const StaffScreen = () => {
                                 onClick={handleSave}
                                 className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-xl shadow-slate-900/20 transition-all active:scale-[0.98] mt-4 uppercase tracking-[0.2em] text-xs"
                             >
-                                AUTHORIZE & CREATE ACCOUNT
+                                {editingUserId ? 'UPDATE ACCOUNT' : 'AUTHORIZE & CREATE ACCOUNT'}
                             </button>
                         </div>
                     </div>

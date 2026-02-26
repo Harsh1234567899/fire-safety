@@ -5,7 +5,7 @@ import { createFireNoctype, deleteFireNoctype, getAllFireNoctypes, updateFireNoc
 const router = Router()
 
 router.post('/create', verifyJWT, authorize('admin'), createFireNoctype)
-router.get('/all', verifyJWT, authorize('admin', 'manager'), getAllFireNoctypes)
+router.get('/all', verifyJWT, authorize('admin', 'manager', 'godown-manager'), getAllFireNoctypes)
 router.put('/:id', verifyJWT, authorize('admin'), updateFireNoctype)
 router.delete('/:id', verifyJWT, authorize('admin'), deleteFireNoctype)
 

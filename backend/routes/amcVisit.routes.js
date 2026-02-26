@@ -4,7 +4,7 @@ import { createAmcVisit, updateAmcVisitById } from "../controllers/amcVisit.cont
 
 const router = Router()
 
-router.post('/create',verifyJWT,authorize('admin', 'manager'), createAmcVisit);
-router.put('/update/:id',verifyJWT,authorize('admin', 'manager'),updateAmcVisitById);
+router.post('/create', verifyJWT, authorize('admin', 'manager', 'godown-manager'), createAmcVisit);
+router.put('/update/:id', verifyJWT, authorize('admin', 'manager', 'godown-manager'), updateAmcVisitById);
 
 export default router

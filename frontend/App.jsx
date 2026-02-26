@@ -49,7 +49,9 @@ const App = () => {
     // Helper: get default route based on role
     const getDefaultRoute = () => {
         const role = currentUser?.role?.toLowerCase();
-        return role === 'godown-manager' ? '/register' : '/dashboard';
+        if (role === 'godown-manager') return '/register';
+        if (role === 'manager') return '/console';
+        return '/dashboard';
     };
 
     const handleSignOut = () => {
@@ -241,6 +243,7 @@ const App = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
+            <Toaster position="top-right" />
             <Sidebar
                 onSignOut={handleSignOut}
                 isOpen={isSidebarOpen}
@@ -266,7 +269,7 @@ const App = () => {
                         <Route path="/" element={<Navigate to={getDefaultRoute()} replace />} />
                         <Route path="/login" element={<Navigate to={getDefaultRoute()} replace />} />
                         <Route path="/dashboard" element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute allowedRoles={['admin']}>
                                 <DashboardPage />
                             </ProtectedRoute>
                         } />
@@ -276,7 +279,7 @@ const App = () => {
                             </ProtectedRoute>
                         } />
                         <Route path="/clients" element={
-                            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                            <ProtectedRoute allowedRoles={['admin', 'manager', 'godown-manager']}>
                                 <ClientsScreen
                                     clients={clients}
                                     userRole={currentUser.role?.toLowerCase() || 'manager'}

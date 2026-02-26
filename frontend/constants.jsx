@@ -9,9 +9,9 @@ import {
 } from "lucide-react"
 
 export const SIDEBAR_ITEMS = [
-    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", roles: ["admin", "manager"] },
+    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", roles: ["admin"] },
     { label: "Register Firm", icon: FilePlus, path: "/register", roles: ["admin", "manager", "godown-manager"] },
-    { label: "Clients", icon: Users, path: "/clients", roles: ["admin", "manager"] },
+    { label: "Clients", icon: Users, path: "/clients", roles: ["admin", "manager", "godown-manager"] },
     { label: "Reports", icon: BarChart3, path: "/reports", roles: ["admin", "manager"] },
     { label: "Manager Console", icon: MessageSquare, path: "/console", roles: ["admin", "manager"] },
     { label: "Settings", icon: Settings, path: "/settings", roles: ["admin"] },

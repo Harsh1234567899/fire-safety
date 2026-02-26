@@ -4,10 +4,10 @@ import { createFireNoc, createFireNOCRefilling, exportFireNOCsXlsx, getFireNoce,
 
 const router = Router()
 
-router.get('/', verifyJWT, authorize('admin', 'manager'), getFireNoce)
-router.post('/create', verifyJWT, authorize('admin', 'manager'), createFireNoc)
-router.post('/refill', verifyJWT, authorize('admin', 'manager'), createFireNOCRefilling)
-router.put('/update/:id', verifyJWT, authorize('admin', 'manager'), updateFireNoc)
+router.get('/', verifyJWT, authorize('admin', 'manager', 'godown-manager'), getFireNoce)
+router.post('/create', verifyJWT, authorize('admin', 'manager', 'godown-manager'), createFireNoc)
+router.post('/refill', verifyJWT, authorize('admin', 'manager', 'godown-manager'), createFireNOCRefilling)
+router.put('/update/:id', verifyJWT, authorize('admin', 'manager', 'godown-manager'), updateFireNoc)
 
 router.post('/download', verifyJWT, authorize('admin', 'manager'), exportFireNOCsXlsx)
 

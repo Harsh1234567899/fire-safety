@@ -38,9 +38,11 @@ const LoginScreen = () => {
         const result = await dispatch(loginUser({ systemId, password }));
         if (loginUser.fulfilled.match(result)) {
             const user = result.payload?.data?.user;
-            const role = user?.role?.toLowerCase();
-            if (role === 'godown-manager') {
+            const role = user?.role?.toLowerCase().replace(/[-\s_]+/g, '');
+            if (role === 'godownmanager') {
                 navigate('/register', { replace: true });
+            } else if (role === 'manager') {
+                navigate('/console', { replace: true });
             } else {
                 navigate('/dashboard', { replace: true });
             }

@@ -14,6 +14,12 @@ export const loginUser = createAsyncThunk(
 );
 
 const savedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+if (savedUser && savedUser.role) {
+    const r = savedUser.role.toLowerCase().replace(/[-\s_]+/g, '');
+    if (r === 'godownmanager') savedUser.role = 'godown-manager';
+    else if (r === 'manager') savedUser.role = 'manager';
+    else if (r === 'admin') savedUser.role = 'admin';
+}
 
 const initialState = {
     user: savedUser, // Restore user if exists
@@ -55,9 +61,15 @@ const authSlice = createSlice({
                 // Backend returns { statusCode, data: { user, accessToken... }, message }
                 // So action.payload.data.user is the user object
                 state.user = action.payload?.data?.user;
+                if (state.user && state.user.role) {
+                    const r = state.user.role.toLowerCase().replace(/[-\s_]+/g, '');
+                    if (r === 'godownmanager') state.user.role = 'godown-manager';
+                    else if (r === 'manager') state.user.role = 'manager';
+                    else if (r === 'admin') state.user.role = 'admin';
+                }
                 state.isAuthenticated = true;
                 localStorage.setItem('adminToken', action.payload?.data?.accessToken); // Store token if needed for non-cookie auth
-                localStorage.setItem('user', JSON.stringify(action.payload?.data?.user));
+                localStorage.setItem('user', JSON.stringify(state.user));
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.loading = false;

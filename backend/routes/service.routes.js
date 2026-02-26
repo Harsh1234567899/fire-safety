@@ -4,9 +4,9 @@ import { getAllServices, getClientServicesWithDetails, getServiceById } from "..
 
 const router = Router()
 
-router.get('/get-all', verifyJWT, authorize('admin', 'manager', 'go-down-manager'), getAllServices);
-router.get('/get-client-services/:clientId', verifyJWT, authorize('admin', 'manager', 'go-down-manager'), getClientServicesWithDetails);
-router.get('/:id', verifyJWT, authorize('admin', 'manager', 'go-down-manager'), getServiceById);
+router.get('/get-all', verifyJWT, authorize('admin', 'manager', 'godown-manager'), getAllServices);
+router.get('/get-client-services/:clientId', verifyJWT, authorize('admin', 'manager', 'godown-manager'), getClientServicesWithDetails);
+router.get('/:id', verifyJWT, authorize('admin', 'manager', 'godown-manager'), getServiceById);
 
 
 export default router
