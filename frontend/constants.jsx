@@ -15,7 +15,7 @@ export const SIDEBAR_ITEMS = [
     { label: "Reports", icon: BarChart3, path: "/reports", roles: ["admin", "manager"] },
     { label: "Manager Console", icon: MessageSquare, path: "/console", roles: ["admin", "manager"] },
     { label: "Settings", icon: Settings, path: "/settings", roles: ["admin"] },
-    { label: "Staff", icon: UserCog, path: "/staff", roles: ["admin"] }
+    { label: "Employee", icon: UserCog, path: "/staff", roles: ["admin"] }
 ]
 
 // EMPTY INITIAL STATE

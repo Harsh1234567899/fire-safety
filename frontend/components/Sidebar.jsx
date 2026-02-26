@@ -67,7 +67,7 @@ const Sidebar = ({ isOpen, onClose, onSignOut }) => {
                     </div>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-1 relative z-10 custom-scrollbar">
+                <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-1 relative z-10 no-scrollbar">
                     {showDashboard && (
                         <div className="mb-8">
                             <p className="px-4 mb-4 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Principal Views</p>

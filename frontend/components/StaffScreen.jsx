@@ -77,7 +77,7 @@ const StaffScreen = () => {
             const payload = {
                 name: formData.name,
                 email: formData.email,
-                username: formData.systemId, // Backend uses 'username', UI user 'systemId'
+                systemId: formData.systemId,
                 password: formData.password,
                 role: formData.role.toLowerCase()
             };
@@ -88,7 +88,7 @@ const StaffScreen = () => {
             if (createdUser) {
                 const newMember = {
                     id: createdUser._id,
-                    systemId: createdUser.username,
+                    systemId: createdUser.systemId,
                     name: createdUser.name,
                     email: createdUser.email,
                     role: createdUser.role.toUpperCase(),
