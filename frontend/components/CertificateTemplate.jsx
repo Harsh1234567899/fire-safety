@@ -97,6 +97,9 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
                                             }
                                         </span>
                                     )}
+                                    <span className="block text-[9px] text-gray-500 font-bold mt-0.5">
+                                        Date: {item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-GB") : item.startDate ? new Date(item.startDate).toLocaleDateString("en-GB") : 'N/A'}
+                                    </span>
 
                                     <span className="block text-[9px] text-gray-500 font-normal mt-0.5 italic">(FOR 1 YEAR VALIDITY)</span>
                                 </td>

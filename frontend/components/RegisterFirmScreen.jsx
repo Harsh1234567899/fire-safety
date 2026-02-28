@@ -8,9 +8,11 @@ import CertificateTemplate from './CertificateTemplate';
 import CustomDropdown from './CustomDropdown.jsx';
 import { createRoot } from 'react-dom/client';
 import { createClient } from '../api/client';
+import { createClientProducts } from '../api/clientProduct';
 import { createCylinder } from '../api/fireExtinguisher';
 import { createNOC } from '../api/fireNoc';
 import { createAMC } from '../api/amc';
+import { getAllProducts } from '../api/product';
 import { getGasCategories, getNocTypes } from '../api/category';
 import { uploadDocument } from '../api/document';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
@@ -80,16 +82,16 @@ const RegisterFirmScreen = ({ onRegister }) => {
         return errors;
     };
 
-    const [cylinders, setCylinders, clearCylinders] = usePersistedState('reg_cylinders', [
-        { id: '1', gasCategory: '', qty: 1, startDate: '', renewalDate: '', renewalNotes: '', showPreview: false }
-    ]);
+    const [cylinders, setCylinders, clearCylinders] = usePersistedState('reg_cylinders', []);
     const [nocs, setNocs, clearNocs] = usePersistedState('reg_nocs', []);
     const [amcs, setAmcs, clearAmcs] = usePersistedState('reg_amcs', []);
+    const [products, setProducts, clearProducts] = usePersistedState('reg_products', []);
 
     // Dropdown Data State
     const [gasCategories, setGasCategories] = useState([]);
     const [gasSubCategories, setGasSubCategories] = useState([]);
     const [nocTypes, setNocTypes] = useState([]);
+    const [availableProducts, setAvailableProducts] = useState([]);
     const [savedClientId, setSavedClientId, clearSavedClientId] = usePersistedState('reg_savedClientId', null);
 
     // Clear all persisted form data (called on successful submission)
@@ -100,15 +102,17 @@ const RegisterFirmScreen = ({ onRegister }) => {
         clearCylinders();
         clearNocs();
         clearAmcs();
+        clearProducts();
         clearSavedClientId();
-    }, [clearView, clearActiveTab, clearFirmDetails, clearCylinders, clearNocs, clearAmcs, clearSavedClientId]);
+    }, [clearView, clearActiveTab, clearFirmDetails, clearCylinders, clearNocs, clearAmcs, clearProducts, clearSavedClientId]);
 
     useEffect(() => {
         const fetchDropdowns = async () => {
             try {
-                const [gasCats, nTypes] = await Promise.all([
+                const [gasCats, nTypes, prods] = await Promise.all([
                     getGasCategories(),
-                    getNocTypes()
+                    getNocTypes(),
+                    getAllProducts()
                 ]);
                 const categories = gasCats.data?.data || [];
                 setGasCategories(categories);
@@ -118,6 +122,7 @@ const RegisterFirmScreen = ({ onRegister }) => {
                 setGasSubCategories(allSubCats);
 
                 setNocTypes(nTypes.data?.data || []);
+                setAvailableProducts(prods.data?.data || []);
             } catch (error) {
                 console.error("Failed to fetch dropdown options", error);
             }
@@ -174,6 +179,8 @@ const RegisterFirmScreen = ({ onRegister }) => {
             setNocs([...nocs, { id: newId, type: defaultNocType ? defaultNocType.type : '', startDate: '', expiry: '', renewalNotes: '', attachedFiles: [] }]);
         } else if (activeTab === 'AMC') {
             setAmcs([...amcs, { id: newId, site: 'AMC', personDetails: '', name: '', mobile: '', startDate: '', expiry: '', renewalNotes: '', attachedFiles: [] }]);
+        } else if (activeTab === 'PRODUCTS') {
+            setProducts([...products, { id: newId, productId: '', qty: 1 }]);
         }
     };
 
@@ -181,6 +188,7 @@ const RegisterFirmScreen = ({ onRegister }) => {
         if (type === 'CYLINDERS') setCylinders(cylinders.filter(c => c.id !== id));
         if (type === 'NOC') setNocs(nocs.filter(n => n.id !== id));
         if (type === 'AMC') setAmcs(amcs.filter(a => a.id !== id));
+        if (type === 'PRODUCTS') setProducts(products.filter(p => p.id !== id));
     };
 
     const updateItem = (id, type, field, value) => {
@@ -190,6 +198,8 @@ const RegisterFirmScreen = ({ onRegister }) => {
             setNocs(nocs.map(n => n.id === id ? { ...n, [field]: value } : n));
         } else if (type === 'AMC') {
             setAmcs(amcs.map(a => a.id === id ? { ...a, [field]: value } : a));
+        } else if (type === 'PRODUCTS') {
+            setProducts(products.map(p => p.id === id ? { ...p, [field]: value } : p));
         }
     };
 
@@ -376,7 +386,8 @@ const RegisterFirmScreen = ({ onRegister }) => {
     const [cylindersSaved, setCylindersSaved] = useState(false);
     const [nocsSaved, setNocsSaved] = useState(false);
     const [amcsSaved, setAmcsSaved] = useState(false);
-    const [savingSection, setSavingSection] = useState(null); // 'CYLINDERS' | 'NOC' | 'AMC' | 'FINAL'
+    const [productsSaved, setProductsSaved] = useState(false);
+    const [savingSection, setSavingSection] = useState(null); // 'CYLINDERS' | 'NOC' | 'AMC' | 'PRODUCTS' | 'FINAL'
 
     // ── Save Fire Extinguishers ────────────────────────────────────────────────
     const handleSaveCylinders = async () => {
@@ -532,11 +543,38 @@ const RegisterFirmScreen = ({ onRegister }) => {
         }
     };
 
+    // ── Save Products ─────────────────────────────────────────────────────────
+    const handleSaveProducts = async () => {
+        if (!savedClientId) { toast.error("Save the Client Profile first."); return; }
+        if (products.length === 0) { toast.error("Add at least one Product."); return; }
+        const invalid = products.find(p => !p.productId);
+        if (invalid) { toast.error("Please select a product name for all product entries."); return; }
+
+        setSavingSection('PRODUCTS');
+        try {
+            const payload = {
+                clientId: savedClientId,
+                products: products.map(p => ({
+                    product: p.productId,
+                    quantity: p.qty
+                }))
+            };
+            await createClientProducts(payload);
+            setProductsSaved(true);
+            toast.success("Products saved successfully ✓");
+        } catch (error) {
+            console.error("Products Save Error", error);
+            toast.error(`Failed to save products: ${error.response?.data?.message || error.message}`);
+        } finally {
+            setSavingSection(null);
+        }
+    };
+
     // ── Final Submit ───────────────────────────────────────────────────────────
     const handleFinalSubmit = () => {
-        const anySaved = cylindersSaved || nocsSaved || amcsSaved;
+        const anySaved = cylindersSaved || nocsSaved || amcsSaved || productsSaved;
         if (!anySaved) {
-            toast.error("Please save at least one section (Cylinders, NOC, or AMC) before finishing.");
+            toast.error("Please save at least one section (Cylinders, NOC, AMC, or Products) before finishing.");
             return;
         }
         // DO NOT clear persisted data here — SUMMARY view needs it to render.
@@ -568,6 +606,14 @@ const RegisterFirmScreen = ({ onRegister }) => {
                 category: a.site,
                 startDate: formatDateDisplay(a.startDate),
                 expiryDate: formatDateDisplay(a.expiry)
+            })),
+            ...products.map(p => ({
+                id: p.id,
+                type: 'PRODUCTS',
+                category: availableProducts.find(ap => ap._id === p.productId)?.productName || 'Product',
+                startDate: 'N/A',
+                expiryDate: 'N/A',
+                quantity: p.qty
             }))
         ];
     };
@@ -828,8 +874,8 @@ const RegisterFirmScreen = ({ onRegister }) => {
                     </div>
 
                     <div className="mb-8 border-t border-gray-100 pt-8">
-                        <div className="flex items-center gap-2 mb-6">
-                            {['CYLINDERS', 'NOC', 'AMC'].map(tab => (
+                        <div className="flex items-center gap-2 mb-6 overflow-x-auto whitespace-nowrap custom-scrollbar pb-2">
+                            {['CYLINDERS', 'NOC', 'AMC', 'PRODUCTS'].map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
@@ -1184,9 +1230,60 @@ const RegisterFirmScreen = ({ onRegister }) => {
                             </div>
                         ))}
 
-                        <button onClick={addItem} className="w-full border-2 border-dashed border-gray-200 py-4 rounded-2xl text-[10px] font-bold uppercase text-gray-400 hover:border-gray-300 hover:bg-gray-50 transition-all mb-6">
-                            + ADD NEW {activeTab === 'CYLINDERS' ? 'CYLINDER' : activeTab} PROVISION
-                        </button>
+                        {activeTab === 'PRODUCTS' && (
+                            <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 flex flex-col gap-6 mb-6">
+                                <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-2">Available Products</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {availableProducts.map(ap => {
+                                        const addedItem = products.find(p => p.productId === ap._id);
+                                        return (
+                                            <div key={ap._id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between gap-4 group hover:border-emerald-100 transition-all h-full">
+                                                <span className="text-sm font-bold text-gray-900 line-clamp-2" title={ap.productName}>{ap.productName}</span>
+                                                <div className="flex justify-end mt-auto">
+                                                    {addedItem ? (
+                                                        <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (addedItem.qty > 1) {
+                                                                        updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty - 1);
+                                                                    } else {
+                                                                        removeItem(addedItem.id, 'PRODUCTS');
+                                                                    }
+                                                                }}
+                                                                className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors font-bold shadow-sm"
+                                                            >-</button>
+                                                            <span className="w-6 text-center text-sm font-bold text-gray-900">{addedItem.qty}</span>
+                                                            <button
+                                                                onClick={() => updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty + 1)}
+                                                                className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors font-bold shadow-sm"
+                                                            >+</button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setProducts([...products, { id: Date.now().toString(), productId: ap._id, qty: 1 }])}
+                                                            className="px-6 py-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border border-emerald-100"
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {availableProducts.length === 0 && (
+                                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 font-bold text-xs uppercase tracking-widest">
+                                        No products available in catalog.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab !== 'PRODUCTS' && (
+                            <button onClick={addItem} className="w-full border-2 border-dashed border-gray-200 py-4 rounded-2xl text-[10px] font-bold uppercase text-gray-400 hover:border-gray-300 hover:bg-gray-50 transition-all mb-6">
+                                + ADD NEW {activeTab === 'CYLINDERS' ? 'CYLINDER' : activeTab} PROVISION
+                            </button>
+                        )}
                     </div>
 
                     {/* ── Per-Section Save Button ── */}
@@ -1236,19 +1333,34 @@ const RegisterFirmScreen = ({ onRegister }) => {
                                 ) : savingSection === 'AMC' ? 'Saving...' : 'Save AMC Contracts'}
                             </button>
                         )}
+                        {activeTab === 'PRODUCTS' && (
+                            <button
+                                onClick={handleSaveProducts}
+                                disabled={savingSection !== null || productsSaved}
+                                className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-widest text-sm flex items-center justify-center gap-3
+                                    ${productsSaved
+                                        ? 'bg-green-500 text-white shadow-green-200 cursor-default'
+                                        : 'bg-[#0f172a] hover:bg-slate-800 text-white shadow-slate-900/20'
+                                    } ${savingSection === 'PRODUCTS' ? 'opacity-70 cursor-wait' : ''}`}
+                            >
+                                {productsSaved ? (
+                                    <><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Products Saved</>
+                                ) : savingSection === 'PRODUCTS' ? 'Saving...' : 'Save Products'}
+                            </button>
+                        )}
                     </div>
 
                     {/* ── Final Submit ── */}
                     <button
                         onClick={handleFinalSubmit}
-                        disabled={!(cylindersSaved || nocsSaved || amcsSaved)}
+                        disabled={!(cylindersSaved || nocsSaved || amcsSaved || productsSaved)}
                         className={`w-full font-bold py-5 rounded-2xl shadow-xl transition-all active:scale-[0.99] uppercase tracking-widest text-sm
-                            ${(cylindersSaved || nocsSaved || amcsSaved)
+                            ${(cylindersSaved || nocsSaved || amcsSaved || productsSaved)
                                 ? 'bg-[#ef4444] hover:bg-red-600 text-white shadow-red-500/20'
                                 : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'
                             }`}
                     >
-                        {(cylindersSaved || nocsSaved || amcsSaved) ? '✓ FINISH REGISTRATION & VIEW CERTIFICATE' : 'SAVE SECTIONS ABOVE TO FINISH'}
+                        {(cylindersSaved || nocsSaved || amcsSaved || productsSaved) ? '✓ FINISH REGISTRATION & VIEW CERTIFICATE' : 'SAVE SECTIONS ABOVE TO FINISH'}
                     </button>
                 </div>
 

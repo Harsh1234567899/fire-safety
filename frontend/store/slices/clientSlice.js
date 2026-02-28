@@ -1,11 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { searchClients, updateClient as apiUpdateClient } from '../../api/client';
+import { getAllClients, updateClient as apiUpdateClient } from '../../api/client';
 
 export const fetchClients = createAsyncThunk(
     'clients/fetchClients',
     async ({ query = '', page = 1, limit = 25 } = {}, { rejectWithValue }) => {
         try {
-            const response = await searchClients(query, page, limit);
+            const response = await getAllClients({ q: query, page, limit, lite: true });
             // Assuming response.data contains { data: [...clients], total, page, limit }
             return {
                 data: response.data?.data || [],

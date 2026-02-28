@@ -14,6 +14,7 @@ import ManagerConsole from './components/ManagerConsole';
 import ReportsScreen from './components/ReportsScreen';
 import RegisterFirmScreen from './components/RegisterFirmScreen';
 import ClientsScreen from './components/ClientsScreen';
+import ReachScreen from './components/ReachScreen';
 import LoginScreen from './components/LoginScreen';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundScreen from './components/NotFoundScreen';
@@ -296,6 +297,11 @@ const App = () => {
                         <Route path="/console" element={
                             <ProtectedRoute allowedRoles={['admin', 'manager']}>
                                 <ManagerConsole />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/reach" element={
+                            <ProtectedRoute allowedRoles={['admin']}>
+                                <ReachScreen />
                             </ProtectedRoute>
                         } />
                         <Route path="/settings" element={

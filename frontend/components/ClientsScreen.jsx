@@ -1,35 +1,10 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-    AlertCircle,
-    FileText,
-    Search,
-    Plus,
-    Trash2,
-    Edit2,
-    ArrowLeft,
-    CheckCircle2,
-    Download,
-    CreditCard,
-    Save,
-    Info,
-    Calendar,
-    File,
-    Printer,
-    Upload,
-    X,
-    FileSpreadsheet,
-    Check,
-    // Added missing icon imports
-    Phone,
-    Mail,
-    MapPin,
-    ShieldCheck,
-    Eye,
-    Copy,
-    Loader2,
-    RefreshCw,
-    Filter
+    AlertCircle, FileText, Search, Plus, Trash2, Edit2, ArrowLeft,
+    CheckCircle2, Download, CreditCard, Save, Info, Calendar, Filter,
+    FileSpreadsheet, RefreshCw, Upload, Check, X, ShieldCheck, MapPin,
+    Mail, Phone, Loader2, Copy, Printer, Eye, Package
 } from 'lucide-react';
 import CertificateTemplate from './CertificateTemplate';
 import { createRoot } from 'react-dom/client';
@@ -39,7 +14,7 @@ import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
-import { downloadClientDirectory } from '../api/client.js';
+import { downloadClientDirectory, getAllClients } from '../api/client.js';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const dispatch = useDispatch();
@@ -90,6 +65,24 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     // Modal State
     const [selectedServiceId, setSelectedServiceId] = useState(null);
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+    const [viewLoadingId, setViewLoadingId] = useState(null);
+
+    const handleViewClient = async (client) => {
+        try {
+            setViewLoadingId(client._id || client.id);
+            const res = await getAllClients({ clientId: client._id || client.id });
+            if (res.data?.success && res.data?.data?.length > 0) {
+                setSelectedClient(res.data.data[0]);
+            } else {
+                toast.error('Could not fetch client details.');
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to load client data.');
+        } finally {
+            setViewLoadingId(null);
+        }
+    };
 
     const handleViewServiceDetails = (serviceId) => {
         setSelectedServiceId(serviceId);
@@ -106,7 +99,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     // Check for auto-open client profile directives from router state
     useEffect(() => {
         if (location.state?.selectedClient) {
-            setSelectedClient(location.state.selectedClient);
+            handleViewClient(location.state.selectedClient);
             // Replace state to avoid re-opening modal on refresh
             navigate(location.pathname, { replace: true, state: {} });
         }
@@ -369,7 +362,11 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
             serialNumbers: item.serialNumbers || item.generatedSerials || [],
             startDate: item.startDate || '',
             expiryDate: item.expiryDate || item.renewalDate || item.expiry || '',
-        }));
+        })).sort((a, b) => {
+            const dateA = new Date(a.createdAt || a.startDate || 0);
+            const dateB = new Date(b.createdAt || b.startDate || 0);
+            return dateA - dateB; // Oldest first
+        });
         if (ledgerItems.length === 0) {
             toast.error('No ledger items to generate certificate for.');
             return;
@@ -477,33 +474,45 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                             </div>
                         </div>
                         <div className="space-y-6">
-                            {selectedClient.ledger?.length > 0 ? selectedClient.ledger.map((item, idx) => (
-                                <div
-                                    key={idx}
-                                    onClick={() => handleViewServiceDetails(item._id || item.id)}
-                                    className="p-6 bg-gray-50 rounded-3xl border border-transparent hover:border-blue-100 hover:bg-blue-50/30 transition-all cursor-pointer group"
-                                >
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'CYLINDERS' ? 'bg-orange-50 text-orange-500' :
-                                                item.type === 'NOC' ? 'bg-blue-50 text-blue-500' :
-                                                    item.type === 'AMC_VISIT' ? 'bg-indigo-50 text-indigo-500' :
-                                                        'bg-purple-50 text-purple-500'
-                                                }`}>
-                                                <ShieldCheck size={24} />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold">{item.category || item.type} Provision</h4>
-                                                {item.type === 'AMC' && item.visits && (
-                                                    <p className="text-xs text-gray-500 font-medium mt-0.5">Technician Visits: <span className="text-purple-600 font-bold">{item.visits} per year</span></p>
-                                                )}
+                            {(() => {
+                                const sortedLedger = [...(selectedClient.ledger || [])].sort((a, b) => {
+                                    const dateA = new Date(a.createdAt || a.startDate || 0);
+                                    const dateB = new Date(b.createdAt || b.startDate || 0);
+                                    return dateB - dateA; // Newest first
+                                });
+
+                                return sortedLedger.length > 0 ? sortedLedger.map((item, idx) => (
+                                    <div
+                                        key={idx}
+                                        onClick={() => handleViewServiceDetails(item._id || item.id)}
+                                        className={`p-6 bg-gray-50 rounded-3xl border border-transparent transition-all group hover:border-blue-100 hover:bg-blue-50/30 cursor-pointer`}
+                                    >
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'CYLINDERS' ? 'bg-orange-50 text-orange-500' :
+                                                    item.type === 'NOC' ? 'bg-blue-50 text-blue-500' :
+                                                        item.type === 'AMC_VISIT' ? 'bg-indigo-50 text-indigo-500' :
+                                                            item.type === 'PRODUCTS' ? 'bg-emerald-50 text-emerald-500' :
+                                                                'bg-purple-50 text-purple-500'
+                                                    }`}>
+                                                    {item.type === 'PRODUCTS' ? <Package size={24} /> : <ShieldCheck size={24} />}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold">{item.category || item.type} {item.type !== 'PRODUCTS' ? 'Provision' : ''}</h4>
+                                                    {item.type === 'AMC' && item.visits && (
+                                                        <p className="text-xs text-gray-500 font-medium mt-0.5">Technician Visits: <span className="text-purple-600 font-bold">{item.visits} per year</span></p>
+                                                    )}
+                                                    {item.type === 'PRODUCTS' && (
+                                                        <p className="text-xs text-gray-500 font-medium mt-0.5"><span className="text-emerald-600 font-bold">Qty: {item.quantity || 1} • {item.notes || 'Product Record'}</span></p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )) : (
-                                <div className="py-20 text-center text-gray-300 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-gray-50 rounded-3xl">No historical provisions mapped</div>
-                            )}
+                                )) : (
+                                    <div className="py-20 text-center text-gray-300 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-gray-50 rounded-3xl">No historical provisions mapped</div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -720,11 +729,12 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                     {visibleColumns.includes('view') && (
                                         <td className="px-4 py-3 text-right">
                                             <button
-                                                onClick={() => setSelectedClient(client)}
-                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-all"
+                                                onClick={() => handleViewClient(client)}
+                                                disabled={viewLoadingId === (client._id || client.id)}
+                                                className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-all disabled:opacity-50"
                                                 title="View Details"
                                             >
-                                                <Eye size={16} />
+                                                {viewLoadingId === (client._id || client.id) ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
                                             </button>
                                         </td>
                                     )}

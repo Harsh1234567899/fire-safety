@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, X, ChevronRight, AlertCircle, CheckCircle, Info, Menu } from 'lucide-react';
+import { Search, Bell, X, ChevronRight, AlertCircle, CheckCircle, Info, Menu, RefreshCw } from 'lucide-react';
 import { MOCK_NOTIFICATIONS } from '../constants';
-import { searchClients } from '../api/client'; // Import API hook
+import { searchClients } from '../api/client';
+import { getNotifications, markAllRead as apiMarkAllRead } from '../api/notification';
 
 const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -10,7 +11,7 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+    const [notifications, setNotifications] = useState([]);
 
     const searchRef = useRef(null);
     const notificationRef = useRef(null);
@@ -29,6 +30,29 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await getNotifications();
+            // Assumes backend returns structure with .data.data
+            if (res?.data?.data) {
+                setNotifications(res.data.data);
+            } else if (res?.data) {
+                setNotifications(res.data);
+            } else if (Array.isArray(res)) {
+                setNotifications(res);
+            } else {
+                setNotifications([]);
+            }
+        } catch (err) {
+            console.error("Failed to fetch notifications:", err);
+        }
+    };
+
+    // Fetch Notifications on load
+    useEffect(() => {
+        fetchNotifications();
     }, []);
 
     // Global search logic (hits backend to search entire database)
@@ -52,17 +76,35 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
-    const markAllRead = () => {
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
+    const markAllRead = async () => {
+        try {
+            await apiMarkAllRead();
+            setNotifications(notifications.map(n => ({ ...n, read: true })));
+        } catch (err) {
+            console.error("Failed to mark notifications read:", err);
+        }
     };
 
     const getNotificationIcon = (type) => {
         switch (type) {
             case 'ALERT': return <AlertCircle className="text-red-500" size={16} />;
             case 'SUCCESS': return <CheckCircle className="text-green-500" size={16} />;
+            case 'WARNING': return <AlertCircle className="text-yellow-500" size={16} />;
             case 'INFO': return <Info className="text-blue-500" size={16} />;
             default: return <Bell size={16} />;
         }
+    };
+
+    // Helper to format time relative
+    const formatTime = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+        if (diffInMinutes < 60) return `${diffInMinutes || 1}m ago`;
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours}h ago`;
+        return `${Math.floor(diffInHours / 24)}d ago`;
     };
 
     return (
@@ -232,18 +274,22 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
 
                     {/* Notifications Dropdown */}
                     {isNotificationsOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-100 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white sticky top-0">
+                        <div className="fixed inset-0 z-[60] flex flex-col bg-white md:absolute md:inset-auto md:top-full md:right-0 md:mt-2 md:w-96 md:border md:border-gray-100 md:rounded-[2rem] md:shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="p-4 md:p-6 border-b border-gray-50 flex items-center justify-between bg-white shrink-0">
                                 <div>
                                     <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">System Liaison Feed</p>
                                 </div>
-                                <button onClick={markAllRead} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest">Mark all as read</button>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={fetchNotifications} className="md:hidden p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"><RefreshCw size={16} /></button>
+                                    <button onClick={() => setIsNotificationsOpen(false)} className="md:hidden p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+                                    <button onClick={markAllRead} className="hidden md:block text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest">Mark all as read</button>
+                                </div>
                             </div>
-                            <div className="max-h-[28rem] overflow-y-auto">
+                            <div className="flex-1 overflow-y-auto md:max-h-[22rem] custom-scrollbar">
                                 {notifications.length > 0 ? (
                                     notifications.map(notif => (
-                                        <div key={notif.id} className={`p-5 flex gap-4 transition-colors relative border-b border-gray-50 ${notif.read ? 'opacity-60 hover:opacity-100' : 'bg-red-50/10 hover:bg-red-50/20'}`}>
+                                        <div key={notif._id} className={`p-5 flex gap-4 transition-colors relative border-b border-gray-50 ${notif.read ? 'opacity-60 hover:opacity-100' : 'bg-red-50/10 hover:bg-red-50/20'}`}>
                                             {!notif.read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
                                             <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
                                                 {getNotificationIcon(notif.type)}
@@ -251,7 +297,7 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-start justify-between gap-2 mb-1">
                                                     <h4 className="text-xs font-bold text-gray-900 truncate">{notif.title}</h4>
-                                                    <span className="text-[9px] font-bold text-gray-300 whitespace-nowrap uppercase tracking-widest">{notif.time}</span>
+                                                    <span className="text-[9px] font-bold text-gray-300 whitespace-nowrap uppercase tracking-widest">{formatTime(notif.createdAt)}</span>
                                                 </div>
                                                 <p className="text-xs text-gray-500 leading-relaxed mb-1">{notif.description}</p>
                                             </div>
@@ -263,10 +309,12 @@ const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
                                     </div>
                                 )}
                             </div>
-                            <div className="p-4 bg-gray-50 text-center border-t border-gray-50">
-                                <button className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest flex items-center justify-center gap-2 mx-auto transition-colors">
-                                    Archive Summary
-                                    <ChevronRight size={12} />
+                            <div className="p-4 bg-gray-50 border-t border-gray-50 shrink-0">
+                                <button onClick={markAllRead} className="md:hidden w-full py-3 bg-blue-50 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-100 transition-colors uppercase tracking-widest text-center">
+                                    Mark all as read
+                                </button>
+                                <button onClick={fetchNotifications} className="hidden md:flex w-full items-center justify-center gap-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest transition-colors py-1">
+                                    <RefreshCw size={12} /> Refresh Feed
                                 </button>
                             </div>
                         </div>

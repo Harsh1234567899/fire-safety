@@ -17,6 +17,8 @@ import { createAmcVisit, updateAmcVisit } from '../api/amcVisit';
 import { getClientServices } from '../api/service';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { getGasCategories, getNocTypes } from '../api/category';
+import { createClientProducts } from '../api/clientProduct';
+import { getAllProducts } from '../api/product';
 import { uploadDocument, deleteDocument } from '../api/document';
 import { toast } from 'react-hot-toast';
 
@@ -43,6 +45,9 @@ const RenewalScreen = ({ onBack }) => {
     // ── search ──────────────────────────────────────────────────────────
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [searchPage, setSearchPage] = useState(1);
+    const [hasMoreClients, setHasMoreClients] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [loadingClient, setLoadingClient] = useState(false);
 
     // ── selected client ─────────────────────────────────────────────────
@@ -53,11 +58,13 @@ const RenewalScreen = ({ onBack }) => {
     const [nocs, setNocs] = useState([]);
     const [amcs, setAmcs] = useState([]);
     const [amcVisits, setAmcVisits] = useState([]);
+    const [products, setProducts] = useState([]);
 
     // ── dropdown data ───────────────────────────────────────────────────
     const [gasCategories, setGasCategories] = useState([]);
     const [gasSubCategories, setGasSubCategories] = useState([]);
     const [nocTypes, setNocTypes] = useState([]);
+    const [globalProducts, setGlobalProducts] = useState([]);
 
     // ── UI state ─────────────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState('CYLINDERS');
@@ -65,6 +72,7 @@ const RenewalScreen = ({ onBack }) => {
     const [nocsSaved, setNocsSaved] = useState(false);
     const [amcsSaved, setAmcsSaved] = useState(false);
     const [amcVisitsSaved, setAmcVisitsSaved] = useState(false);
+    const [productsSaved, setProductsSaved] = useState(false);
     const [savingSection, setSavingSection] = useState(null);
     const [uploadingFile, setUploadingFile] = useState(null); // track which item is uploading
     const [isDownloading, setIsDownloading] = useState(false);
@@ -83,33 +91,63 @@ const RenewalScreen = ({ onBack }) => {
     useEffect(() => {
         (async () => {
             try {
-                const [gasCats, nTypes] = await Promise.all([getGasCategories(), getNocTypes()]);
+                const [gasCats, nTypes, prods] = await Promise.all([getGasCategories(), getNocTypes(), getAllProducts()]);
                 const cats = gasCats.data?.data || [];
                 setGasCategories(cats);
                 setGasSubCategories(cats.flatMap(c => c.subcategories || []));
                 setNocTypes(nTypes.data?.data || []);
+                setGlobalProducts(prods.data?.data || []);
             } catch (e) { console.error('Dropdown load failed', e); }
         })();
     }, []);
 
     // ── search ──────────────────────────────────────────────────────────
     useEffect(() => {
-        if (!searchTerm.trim()) { setSearchResults([]); return; }
+        if (!searchTerm.trim()) {
+            setSearchResults([]);
+            setSearchPage(1);
+            setHasMoreClients(false);
+            return;
+        }
         const t = setTimeout(async () => {
+            setSearchPage(1);
             try {
-                const res = await searchClients(searchTerm);
-                setSearchResults(res.data?.data || []);
-            } catch { setSearchResults([]); }
+                const res = await searchClients(searchTerm, 1, 25);
+                const results = res.data?.data || [];
+                setSearchResults(results);
+                setHasMoreClients(results.length === 25);
+            } catch {
+                setSearchResults([]);
+                setHasMoreClients(false);
+            }
         }, 400);
         return () => clearTimeout(t);
     }, [searchTerm]);
+
+    const handleLoadMore = async () => {
+        if (!hasMoreClients || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const nextPage = searchPage + 1;
+            const res = await searchClients(searchTerm, nextPage, 25);
+            const newResults = res.data?.data || [];
+            setSearchResults(prev => [...prev, ...newResults]);
+            setSearchPage(nextPage);
+            setHasMoreClients(newResults.length === 25);
+        } catch (e) {
+            console.error('Failed to load more clients', e);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     // ── select client & fetch history ────────────────────────────────────
     const handleSelectClient = async (selectedClient) => {
         setLoadingClient(true);
         try {
-            const { data } = await getClientServices(selectedClient._id);
-            const history = data?.groupedServices || {};
+            const servicesRes = await getClientServices(selectedClient._id);
+
+            const history = servicesRes.data?.groupedServices || {};
 
             const cylindersFromHistory = (history.fireExtinguishers || []).map(item => ({
                 id: item._id?.toString() || String(Date.now() + Math.random()),
@@ -169,19 +207,31 @@ const RenewalScreen = ({ onBack }) => {
                 lastExpiry: item.endDate || item.visitDate,
             }));
 
+            const productsFromHistory = (history.products || []).flatMap(item =>
+                (item.products || []).map(p => ({
+                    id: String(Date.now() + Math.random()), // Unique ID for each product line
+                    productId: p.productId,
+                    productName: p.details?.productName || 'Unknown Product',
+                    qty: p.quantity || 1,
+                    isNew: false
+                }))
+            );
+
             setCylinders(cylindersFromHistory);
             setNocs(nocsFromHistory);
             setAmcs(amcsFromHistory);
             setAmcVisits(amcVisitsFromHistory);
+            setProducts(productsFromHistory);
 
             // default first tab to whichever has data
             if (cylindersFromHistory.length > 0) setActiveTab('CYLINDERS');
             else if (nocsFromHistory.length > 0) setActiveTab('NOC');
             else if (amcsFromHistory.length > 0) setActiveTab('AMC');
             else if (amcVisitsFromHistory.length > 0) setActiveTab('AMC_VISITS');
+            else if (productsFromHistory.length > 0) setActiveTab('PRODUCTS');
 
             setClient({ ...selectedClient, _id: selectedClient._id || selectedClient.id });
-            setCylindersSaved(false); setNocsSaved(false); setAmcsSaved(false); setAmcVisitsSaved(false);
+            setCylindersSaved(false); setNocsSaved(false); setAmcsSaved(false); setAmcVisitsSaved(false); setProductsSaved(false);
             setView('FORM');
         } catch (e) {
             console.error(e);
@@ -193,7 +243,7 @@ const RenewalScreen = ({ onBack }) => {
 
     // ── generic item update ──────────────────────────────────────────────
     const updateItem = (id, section, field, value) => {
-        const setter = section === 'CYLINDERS' ? setCylinders : section === 'NOC' ? setNocs : section === 'AMC' ? setAmcs : setAmcVisits;
+        const setter = section === 'CYLINDERS' ? setCylinders : section === 'NOC' ? setNocs : section === 'AMC' ? setAmcs : section === 'PRODUCTS' ? setProducts : setAmcVisits;
         setter(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
 
@@ -259,10 +309,21 @@ const RenewalScreen = ({ onBack }) => {
         }]);
         setAmcVisitsSaved(false);
     };
+    const addProductFromGrid = (productId, productName) => {
+        setProducts(prev => [...prev, {
+            id: String(Date.now() + Math.random()),
+            productId,
+            productName,
+            qty: 1,
+            isNew: true,
+        }]);
+        setProductsSaved(false);
+    };
     const removeItem = (id, section) => {
         if (section === 'CYLINDERS') { setCylinders(prev => prev.filter(i => i.id !== id)); setCylindersSaved(false); }
         else if (section === 'NOC') { setNocs(prev => prev.filter(i => i.id !== id)); setNocsSaved(false); }
         else if (section === 'AMC') { setAmcs(prev => prev.filter(i => i.id !== id)); setAmcsSaved(false); }
+        else if (section === 'PRODUCTS') { setProducts(prev => prev.filter(i => i.id !== id)); setProductsSaved(false); }
         else { setAmcVisits(prev => prev.filter(i => i.id !== id)); setAmcVisitsSaved(false); }
     };
 
@@ -489,10 +550,38 @@ const RenewalScreen = ({ onBack }) => {
         }
     };
 
+    // ── save Products ────────────────────────────────────────────────────
+    const handleSaveProducts = async () => {
+        if (!products.length) { toast.error('No Products to save.'); return; }
+        const invalid = products.find(p => !p.productId || !p.qty);
+        if (invalid) { toast.error('Each Product needs a selection and quantity.'); return; }
+        setSavingSection('PRODUCTS');
+        try {
+            // Upsert the entire products array for this client
+            const payload = {
+                clientId: client._id,
+                products: products.map(p => ({
+                    productId: p.productId,
+                    quantity: p.qty,
+                    details: '' // Not widely used inside frontend currently
+                }))
+            };
+            await createClientProducts(payload);
+            setProductsSaved(true);
+
+            // Mark all items as no longer 'new' so they lock down
+            setProducts(prev => prev.map(p => ({ ...p, isNew: false })));
+
+            toast.success('Products saved!');
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Failed to save Products.');
+        } finally {
+            setSavingSection(null);
+        }
+    };
+
     // ── finish & generate PDF ────────────────────────────────────────────
     const handleFinish = () => {
-        const anySaved = cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved;
-        if (!anySaved) { toast.error('Save at least one section before finishing.'); return; }
         setView('DONE');
     };
 
@@ -519,6 +608,12 @@ const RenewalScreen = ({ onBack }) => {
                 _id: a.id, type: 'AMC', category: `AMC – ${a.site}`,
                 serialNumbers: [],
                 startDate: a.startDate, endDate: a.expiry, notes: a.renewalNotes,
+            })),
+            ...products.filter(p => p.productId).map(p => ({
+                _id: p.id, type: 'PRODUCTS', category: p.productName || 'Purchased Product',
+                serialNumbers: [],
+                quantity: p.qty,
+                startDate: new Date().toISOString().slice(0, 10), endDate: '', notes: '',
             })),
         ];
         const container = document.createElement('div');
@@ -596,6 +691,18 @@ const RenewalScreen = ({ onBack }) => {
                                 </button>
                             </div>
                         ))}
+                        {hasMoreClients && (
+                            <div className="flex justify-center mt-6 mb-4">
+                                <button
+                                    onClick={handleLoadMore}
+                                    disabled={loadingMore}
+                                    className="px-6 py-2.5 bg-gray-100 text-gray-700 font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-gray-200 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                                >
+                                    {loadingMore ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                                    Load More
+                                </button>
+                            </div>
+                        )}
                         {!loadingClient && searchTerm && searchResults.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                                 <X size={32} className="mb-3 opacity-20" />
@@ -704,17 +811,18 @@ const RenewalScreen = ({ onBack }) => {
 
                 {/* ── Tabs ── */}
                 <div className="flex items-center gap-2 mb-6 overflow-x-auto custom-scrollbar pb-2">
-                    {['CYLINDERS', 'NOC', 'AMC', 'AMC_VISITS'].map(tab => (
+                    {['CYLINDERS', 'NOC', 'AMC', 'AMC_VISITS', 'PRODUCTS'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-6 py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-[#0f172a] text-white shadow-lg shadow-slate-900/20' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
                         >
-                            {tab}
+                            {tab === 'PRODUCTS' ? 'PRODUCTS' : tab.replace('_', ' ')}
                             {tab === 'CYLINDERS' && cylinders.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{cylinders.length}</span>}
                             {tab === 'NOC' && nocs.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{nocs.length}</span>}
                             {tab === 'AMC' && amcs.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{amcs.length}</span>}
                             {tab === 'AMC_VISITS' && amcVisits.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{amcVisits.length}</span>}
+                            {tab === 'PRODUCTS' && products.length > 0 && <span className="ml-2 bg-white/20 text-current px-1.5 py-0.5 rounded text-[9px]">{products.length}</span>}
                         </button>
                     ))}
                 </div>
@@ -1210,6 +1318,71 @@ const RenewalScreen = ({ onBack }) => {
                     </>
                 )}
 
+                {/* ── PRODUCTS TAB ── */}
+                {activeTab === 'PRODUCTS' && <>
+                    {/* Read-Only Existing Products */}
+                    {products.filter(p => !p.isNew).length > 0 && (
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">Existing Products (Read-Only)</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {products.filter(p => !p.isNew).map(item => (
+                                    <div key={item.id} className="bg-gray-100 p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between gap-4">
+                                        <span className="text-sm font-bold text-gray-600 line-clamp-2" title={item.productName}>{item.productName || 'Unknown Product'}</span>
+                                        <div className="flex justify-start mt-auto">
+                                            <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                                Qty: {item.qty}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Available Global Products for Selection (New Additions) */}
+                    <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 flex flex-col gap-6 mb-6">
+                        <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-2">Available Products to Add</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {globalProducts.map(ap => {
+                                const addedItem = products.find(p => p.productId === ap._id && p.isNew);
+                                return (
+                                    <div key={ap._id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between gap-4 group hover:border-emerald-100 transition-all h-full">
+                                        <span className="text-sm font-bold text-gray-900 line-clamp-2" title={ap.productName}>{ap.productName}</span>
+                                        <div className="flex justify-end mt-auto">
+                                            {addedItem ? (
+                                                <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (addedItem.qty > 1) {
+                                                                updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty - 1);
+                                                            } else {
+                                                                removeItem(addedItem.id, 'PRODUCTS');
+                                                            }
+                                                        }}
+                                                        className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-200 hover:border-red-200 text-gray-600 hover:text-red-500 transition-colors shadow-sm font-bold text-lg"
+                                                    >-</button>
+                                                    <span className="text-sm font-bold w-4 text-center text-gray-900">{addedItem.qty}</span>
+                                                    <button
+                                                        onClick={() => updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty + 1)}
+                                                        className="w-8 h-8 flex items-center justify-center bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg transition-colors shadow-sm font-bold text-lg"
+                                                    >+</button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => addProductFromGrid(ap._id, ap.productName)}
+                                                    className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-white border-2 border-dashed border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl transition-all"
+                                                >
+                                                    Add
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </>}
+
                 {/* ── Section Save Button ── */}
                 <div className="mt-2 mb-4">
                     {activeTab === 'CYLINDERS' && cylinders.length > 0 && (
@@ -1236,12 +1409,18 @@ const RenewalScreen = ({ onBack }) => {
                             {amcVisitsSaved ? <><Check size={18} /> AMC Visits Saved!</> : savingSection === 'AMC_VISITS' ? 'Saving…' : 'Save AMC Visits'}
                         </button>
                     )}
+                    {activeTab === 'PRODUCTS' && products.length > 0 && (
+                        <button onClick={handleSaveProducts} disabled={savingSection !== null || productsSaved}
+                            className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-widest text-sm flex items-center justify-center gap-3 ${productsSaved ? 'bg-green-500 text-white cursor-default' : 'bg-[#0f172a] hover:bg-slate-800 text-white'} ${savingSection === 'PRODUCTS' ? 'opacity-70 cursor-wait' : ''}`}>
+                            {productsSaved ? <><Check size={18} /> Products Saved!</> : savingSection === 'PRODUCTS' ? 'Saving…' : 'Save Products'}
+                        </button>
+                    )}
                 </div>
 
                 {/* ── Finish Button ── */}
-                <button onClick={handleFinish} disabled={!(cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved)}
-                    className={`w-full font-bold py-5 rounded-2xl shadow-xl transition-all active:scale-[0.99] uppercase tracking-widest text-sm ${(cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved) ? 'bg-[#ef4444] hover:bg-red-600 text-white shadow-red-500/20' : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'}`}>
-                    {(cylindersSaved || nocsSaved || amcsSaved || amcVisitsSaved) ? '✓ Finish Renewal & View Certificate' : 'Save Sections Above to Finish'}
+                <button onClick={handleFinish}
+                    className="w-full font-bold py-5 rounded-2xl shadow-xl transition-all active:scale-[0.99] uppercase tracking-widest text-sm bg-[#ef4444] hover:bg-red-600 text-white shadow-red-500/20">
+                    Finish Renewal & View Certificate
                 </button>
             </div>
 

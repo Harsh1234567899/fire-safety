@@ -63,6 +63,7 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
     const isNoc = service?.model === 'FIRE_NOC' || service?.assetType === 'NOC';
     const isAmc = service?.model === 'AMC' || service?.assetType === 'AMC';
     const isAmcVisit = service?.model === 'AMC_VISIT' || service?.model === 'amcVisit' || service?.type === 'AMC_VISIT';
+    const isClientProduct = service?.model === 'CLIENT_PRODUCT' || service?.type === 'PRODUCTS';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -73,13 +74,14 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isNoc ? 'bg-blue-50 text-blue-500' :
                             isAmc ? 'bg-purple-50 text-purple-500' :
                                 isAmcVisit ? 'bg-indigo-50 text-indigo-500' :
-                                    'bg-orange-50 text-orange-500'
+                                    isClientProduct ? 'bg-emerald-50 text-emerald-500' :
+                                        'bg-orange-50 text-orange-500'
                             }`}>
-                            {isNoc ? <FileText size={24} /> : (isAmc || isAmcVisit) ? <ShieldCheck size={24} /> : <Box size={24} />}
+                            {isNoc ? <FileText size={24} /> : (isAmc || isAmcVisit) ? <ShieldCheck size={24} /> : isClientProduct ? <Box size={24} /> : <Box size={24} />}
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">
-                                {isNoc ? 'Fire NOC' : isAmc ? 'AMC Contract' : isAmcVisit ? 'AMC Visit' : 'Fire Extinguisher'} Details
+                                {isNoc ? 'Fire NOC' : isAmc ? 'AMC Contract' : isAmcVisit ? 'AMC Visit' : isClientProduct ? 'Purchased Products' : 'Fire Extinguisher'} Details
                             </h2>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                 ID: {service?._id || service?.id || 'Unknown'}
@@ -214,6 +216,24 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
                                                     </div>
                                                 </div>
                                             </>
+                                        )}
+                                        {isClientProduct && (
+                                            <div className="col-span-1 sm:col-span-2 space-y-4">
+                                                {service?.products?.map((p, idx) => (
+                                                    <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                                                        <div>
+                                                            <p className="text-sm font-bold text-emerald-950">{p.details?.productName || 'Unknown Product'}</p>
+                                                            <p className="text-xs text-emerald-700">{p.details?.productDescription || 'No description available'}</p>
+                                                        </div>
+                                                        <span className="mt-3 sm:mt-0 inline-flex px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold uppercase tracking-widest shadow-sm">
+                                                            Qty: {p.quantity || 1}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {(!service?.products || service.products.length === 0) && (
+                                                    <p className="text-sm text-gray-500 italic">No products found in this record.</p>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 </div>

@@ -214,12 +214,61 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
       }
     ];
 
+    // Client Products pipeline
+    const clientProductsPipeline = [
+      matchStage,
+      {
+        $addFields: {
+          model: "CLIENT_PRODUCT",
+          service: "Products",
+          endDate: "$createdAt"
+        }
+      },
+      { $unwind: { path: "$products", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "productObj"
+        }
+      },
+      { $unwind: { path: "$productObj", preserveNullAndEmptyArrays: true } },
+      // Group back together to present one ledger record per purchase basket
+      {
+        $group: {
+          _id: "$_id",
+          clientId: { $first: "$clientId" },
+          model: { $first: "$model" },
+          service: { $first: "$service" },
+          endDate: { $first: "$endDate" },
+          createdAt: { $first: "$createdAt" },
+          productsArray: {
+            $push: {
+              productId: "$products.productId",
+              quantity: "$products.quantity",
+              details: "$productObj"
+            }
+          }
+        }
+      },
+      // Rename productsArray back to products to avoid shadow conflict
+      {
+        $addFields: {
+          products: "$productsArray",
+          productObj: { $arrayElemAt: ["$productsArray.details", 0] } // Helpful for RenewalScreen flat mapping
+        }
+      },
+      { $project: { productsArray: 0 } }
+    ];
+
     // Combined pipeline starting from fireextinguishers collection
     const pipeline = [
       ...fePipeline,
       { $unionWith: { coll: "amcs", pipeline: amcPipeline } },
       { $unionWith: { coll: "amcvisits", pipeline: amcVisitPipeline } },
       { $unionWith: { coll: "firenocs", pipeline: nocPipeline } },
+      { $unionWith: { coll: "clientproducts", pipeline: clientProductsPipeline } },
       { $sort: { createdAt: -1 } } // sort newest first overall
     ];
 
@@ -232,6 +281,7 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
         amcs: [],
         amcVisits: [],
         fireNocs: [],
+        products: [],
         unknown: []
       };
 
@@ -254,6 +304,10 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
         }
         if (model === "FIRE_NOC" || serviceName.includes("FIRE NOC") || s.nocType) {
           groups.fireNocs.push(s);
+          continue;
+        }
+        if (model === "CLIENT_PRODUCT" || serviceName.includes("PRODUCTS")) {
+          groups.products.push(s);
           continue;
         }
 
@@ -282,6 +336,7 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
       sortByNewest(groups.amcs);
       sortByNewest(groups.amcVisits);
       sortByNewest(groups.fireNocs);
+      sortByNewest(groups.products);
       sortByNewest(groups.unknown);
 
       return groups;
@@ -296,6 +351,7 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
       amcs: grouped.amcs.length,
       amcVisits: grouped.amcVisits.length,
       fireNocs: grouped.fireNocs.length,
+      products: grouped.products.length,
       unknown: grouped.unknown.length
     };
 
@@ -458,6 +514,61 @@ const getServiceById = async (req, res) => {
     ]).toArray();
 
     if (noc[0]) return res.json({ success: true, record: noc[0] });
+
+    // ---------- 5. CLIENT PRODUCTS ----------
+    let clientProd = await db.collection("clientproducts").aggregate([
+      // A client product array might match the wrapper ID, or we try to find the actual nested product.
+      // Easiest is to match the wrapper document ID, then we just return the document
+      { $match: { _id: objectId } },
+      {
+        $addFields: {
+          model: "CLIENT_PRODUCT",
+          service: "Products Purchased",
+          endDate: null
+        }
+      },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "clientData"
+        }
+      },
+      { $unwind: { path: "$clientData", preserveNullAndEmptyArrays: true } },
+      // Unwind products to populate their details
+      { $unwind: { path: "$products", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      { $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
+      // Group back together so we get one document with a populated products array
+      {
+        $group: {
+          _id: "$_id",
+          model: { $first: "$model" },
+          service: { $first: "$service" },
+          endDate: { $first: "$endDate" },
+          clientData: { $first: "$clientData" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          products: {
+            $push: {
+              productId: "$products.productId",
+              quantity: "$products.quantity",
+              details: "$productDetails"
+            }
+          }
+        }
+      }
+    ]).toArray();
+
+    if (clientProd[0]) return res.json({ success: true, record: clientProd[0] });
 
     // ---------- NOT FOUND ----------
     return res.status(404).json({

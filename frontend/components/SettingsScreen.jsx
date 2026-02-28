@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Settings, FlaskConical, FileText, Plus, Trash2, Scale, Settings2, X, Edit2 } from 'lucide-react';
 import { getGasCategories, getNocTypes, createGasSubCategory, deleteGasSubCategory, createNocType, deleteNocType, updateGasSubCategory, updateNocType } from '../api/category';
+import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../api/product';
 import CustomDropdown from './CustomDropdown.jsx';
 
 const SettingsScreen = () => {
     const [activeTab, setActiveTab] = useState('GAS');
     const [gasItems, setGasItems] = useState([]);
     const [nocItems, setNocItems] = useState([]);
+    const [productItems, setProductItems] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Initial Fetch
@@ -17,23 +19,14 @@ const SettingsScreen = () => {
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const [gasRes, nocRes] = await Promise.all([getGasCategories(), getNocTypes()]);
-            // Gas Categories: standard is nested, but the "add-category" endpoint from backend likely operates on subcategories? 
-            // Checking backend map: /v12/extinguisher-category/add-category -> addsubCatagory.
-            // And /v6/category returns nested.
-            // Wait, "Gas Catalog" in UI matches "Gas Cylinder Types".
-            // The UI seems to want "SubCategories" (like 4KG CO2).
-            // The backend /v6/category returns { _id, name, subcategories: [] }.
-            // We need to flatten ALL subcategories to show in this list, OR show categories?
-            // "Gas Cylinder Types" usually means "CO2", "Powder".
-            // But the UI has "Capacity" field. This strongly implies "SubCategory" (e.g. CO2 4.5KG).
-            // I will assume we are listing ALL subcategories here.
+            const [gasRes, nocRes, prodRes] = await Promise.all([getGasCategories(), getNocTypes(), getAllProducts()]);
 
             const categories = gasRes.data?.data || [];
             const allSubCats = categories.flatMap(cat => cat.subcategories || []);
             setGasItems(allSubCats);
 
             setNocItems(nocRes.data?.data || []);
+            setProductItems(prodRes.data?.data || []);
         } catch (e) {
             console.error("Failed to fetch settings", e);
         } finally {
@@ -46,9 +39,10 @@ const SettingsScreen = () => {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
+        description: '',
         capacity: '',
         unit: 'kg',
-        categoryId: '' // Needed for Gas SubCategory creation?
+        imageFile: null
     });
 
     const handleDelete = async (id, type) => {
@@ -57,9 +51,12 @@ const SettingsScreen = () => {
             if (type === 'GAS') {
                 await deleteGasSubCategory(id);
                 setGasItems(prev => prev.filter(item => item._id !== id));
-            } else {
+            } else if (type === 'NOC') {
                 await deleteNocType(id);
                 setNocItems(prev => prev.filter(item => item._id !== id));
+            } else if (type === 'PRODUCT') {
+                await deleteProduct(id);
+                setProductItems(prev => prev.filter(item => item._id !== id));
             }
         } catch (e) {
             alert("Failed to delete: " + (e.response?.data?.message || e.message));
@@ -70,19 +67,15 @@ const SettingsScreen = () => {
         if (item && item._id) {
             setEditingId(item._id);
             setFormData({
-                name: type => activeTab === 'GAS' ? (item.originalName || (item.name ? item.name.split('-')[0].toUpperCase() : '')) : (item.name || item.type),
+                name: activeTab === 'GAS' ? (item.originalName || (item.name ? item.name.split('-')[0].toUpperCase() : '')) : (activeTab === 'PRODUCT' ? item.productName : (item.name || item.type)),
+                description: item.productDescription || '',
                 capacity: item.weight || '',
                 unit: item.kgLiter || 'kg',
-                categoryId: ''
+                imageFile: null
             });
-            // Immediately resolve the getter for name
-            setFormData(prev => ({
-                ...prev,
-                name: activeTab === 'GAS' ? (item.originalName || (item.name ? item.name.split('-')[0].toUpperCase() : '')) : (item.name || item.type),
-            }));
         } else {
             setEditingId(null);
-            setFormData({ name: '', capacity: '', unit: 'kg', categoryId: '' }); // Reset
+            setFormData({ name: '', description: '', capacity: '', unit: 'kg', imageFile: null }); // Reset
         }
         setIsModalOpen(true);
     };
@@ -111,7 +104,7 @@ const SettingsScreen = () => {
                     }
                 }
 
-            } else {
+            } else if (activeTab === 'NOC') {
                 const payload = { type: formData.name };
                 if (editingId) {
                     const res = await updateNocType(editingId, payload);
@@ -122,6 +115,25 @@ const SettingsScreen = () => {
                     const res = await createNocType(payload);
                     if (res.data?.data) {
                         setNocItems(prev => [...prev, res.data.data]);
+                    }
+                }
+            } else if (activeTab === 'PRODUCT') {
+                const prodFormData = new FormData();
+                prodFormData.append('productName', formData.name);
+                prodFormData.append('productDescription', formData.description);
+                if (formData.imageFile) {
+                    prodFormData.append('image', formData.imageFile);
+                }
+
+                if (editingId) {
+                    const res = await updateProduct(editingId, prodFormData);
+                    if (res.data?.data) {
+                        setProductItems(prev => prev.map(i => i._id === editingId ? res.data.data : i));
+                    }
+                } else {
+                    const res = await createProduct(prodFormData);
+                    if (res.data?.data) {
+                        setProductItems(prev => [...prev, res.data.data]);
                     }
                 }
             }
@@ -139,15 +151,20 @@ const SettingsScreen = () => {
             {items.map((item) => (
                 <div key={item._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors group gap-4">
                     <div className="flex items-center gap-4 sm:gap-6 w-full">
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex shrink-0 flex-none items-center justify-center ${type === 'GAS' ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-500'}`}>
-                            {type === 'GAS' ? <Scale size={24} /> : <FileText size={24} />}
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex shrink-0 flex-none items-center justify-center ${type === 'GAS' ? 'bg-slate-100 text-slate-500' : type === 'PRODUCT' ? 'bg-green-50 text-green-500 overflow-hidden' : 'bg-blue-50 text-blue-500'}`}>
+                            {type === 'GAS' ? <Scale size={24} /> : type === 'PRODUCT' ? (
+                                item.productImages?.url ? <img src={item.productImages.url} alt={item.productName} className="w-full h-full object-cover" /> : <Settings2 size={24} />
+                            ) : <FileText size={24} />}
                         </div>
                         <div>
-                            <h4 className="text-base font-bold text-gray-900">{type === 'GAS' ? (item.originalName || (item.name ? item.name.split('-')[0].toUpperCase() : '')) : (item.name || item.type)}</h4>
+                            <h4 className="text-base font-bold text-gray-900">{type === 'GAS' ? (item.originalName || (item.name ? item.name.split('-')[0].toUpperCase() : '')) : type === 'PRODUCT' ? item.productName : (item.name || item.type)}</h4>
                             {type === 'GAS' && item.weight && (
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">{item.weight} {item.kgLiter || 'kg'}</p>
                             )}
-                            {item.description && (
+                            {type === 'PRODUCT' && item.productDescription && (
+                                <p className="text-xs text-gray-400 mt-0.5">{item.productDescription}</p>
+                            )}
+                            {(type !== 'PRODUCT' && item.description) && (
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">{item.description}</p>
                             )}
                         </div>
@@ -217,6 +234,17 @@ const SettingsScreen = () => {
                         <FileText size={20} className={activeTab === 'NOC' ? 'text-red-500' : 'text-gray-400'} />
                         NOC Types
                     </button>
+
+                    <button
+                        onClick={() => setActiveTab('PRODUCT')}
+                        className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${activeTab === 'PRODUCT'
+                            ? 'bg-white shadow-md text-red-500 font-bold border border-red-50'
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 font-medium'
+                            }`}
+                    >
+                        <Settings2 size={20} className={activeTab === 'PRODUCT' ? 'text-red-500' : 'text-gray-400'} />
+                        Products
+                    </button>
                 </div>
 
                 {/* Content Area */}
@@ -224,10 +252,10 @@ const SettingsScreen = () => {
                     <div className="flex items-center justify-between mb-6 md:mb-8">
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">
-                                {activeTab === 'GAS' ? 'Gas Cylinder Types' : 'Fire NOC Categories'}
+                                {activeTab === 'GAS' ? 'Gas Cylinder Types' : activeTab === 'PRODUCT' ? 'Sellable Products' : 'Fire NOC Categories'}
                             </h2>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                {activeTab === 'GAS' ? 'Inventory Unit Templates' : 'Compliance Label Templates'}
+                                {activeTab === 'GAS' ? 'Inventory Unit Templates' : activeTab === 'PRODUCT' ? 'General Merchandise' : 'Compliance Label Templates'}
                             </p>
                         </div>
 
@@ -239,7 +267,7 @@ const SettingsScreen = () => {
                         </button>
                     </div>
 
-                    {activeTab === 'GAS' ? renderList(gasItems, 'GAS') : renderList(nocItems, 'NOC')}
+                    {activeTab === 'GAS' ? renderList(gasItems, 'GAS') : activeTab === 'PRODUCT' ? renderList(productItems, 'PRODUCT') : renderList(nocItems, 'NOC')}
                 </div>
             </div>
 
@@ -251,7 +279,7 @@ const SettingsScreen = () => {
                     <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-gray-900">
-                                {activeTab === 'GAS' ? (editingId ? 'Edit Gas Category' : 'New Gas Category') : (editingId ? 'Edit NOC Category' : 'New NOC Category')}
+                                {activeTab === 'GAS' ? (editingId ? 'Edit Gas Category' : 'New Gas Category') : activeTab === 'PRODUCT' ? (editingId ? 'Edit Product' : 'New Product') : (editingId ? 'Edit NOC Category' : 'New NOC Category')}
                             </h3>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -295,6 +323,37 @@ const SettingsScreen = () => {
                                                 className="w-full text-sm font-medium"
                                             />
                                         </div>
+                                    </div>
+                                </>
+                            ) : activeTab === 'PRODUCT' ? (
+                                <>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Product Name</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-red-200 rounded-xl px-4 py-3 text-sm font-medium outline-none transition-all"
+                                            placeholder="e.g. Fire Blanket"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Description</label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-red-200 rounded-xl px-4 py-3 text-sm font-medium outline-none transition-all resize-none h-24"
+                                            placeholder="Describe the product..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Product Image {editingId && '(Optional to replace)'}</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
+                                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-red-200 rounded-xl px-4 py-2 text-sm font-medium outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                                        />
                                     </div>
                                 </>
                             ) : (

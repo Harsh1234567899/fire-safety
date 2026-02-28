@@ -6,7 +6,7 @@ import { errorHandler } from "./middlewares/errorHandler.middlewares.js";
 
 const app = express()
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.CORS_ORIGIN.split(','),
   credentials: true,
 }))
 
@@ -59,7 +59,17 @@ app.use('/api/v12/extinguisher-category', gasSilinderCategoryRouter)
 import serviceRouter from './routes/service.routes.js'
 app.use('/api/v13/service', serviceRouter)
 
+import productRouter from './routes/product.routes.js'
+app.use('/api/v14/product', productRouter)
 
+import reachRouter from './routes/reach.routes.js'
+app.use('/api/v15/reach', reachRouter)
+
+import notificationRouter from './routes/notification.routes.js'
+app.use('/api/v16/notifications', notificationRouter)
+
+import clientProductRouter from './routes/clientProduct.routes.js'
+app.use('/api/v17/client-product', clientProductRouter)
 
 app.use(errorHandler)
 

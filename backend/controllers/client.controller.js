@@ -7,9 +7,11 @@ import { gasSilinder } from '../models/gasSilinder.model.js'
 import { fireNOC } from '../models/fireNOC.model.js'
 import { AMC } from '../models/AMC.model.js'
 import { amcVisit } from '../models/AMCvisit.model.js'
+import { clientProduct } from '../models/clientProduct.model.js'
 import { monoIdIsValid } from '../utils/mongoDBid.js'
 import mongoose from 'mongoose'
 import ExcelJS from 'exceljs'
+
 
 const validateCreateClient = [
     body("firmName")
@@ -207,6 +209,10 @@ const getAllClients = asyncHandler(
             ];
         }
 
+        if (req.query.clientId) {
+            filter._id = req.query.clientId;
+        }
+
         // 1. Fetch Clients
         const [total, clients] = await Promise.all([
             client.countDocuments(filter),
@@ -218,10 +224,24 @@ const getAllClients = asyncHandler(
                 .lean(),
         ]);
 
+        if (req.query.lite === 'true') {
+            return res.status(200).json({
+                success: true,
+                total,
+                page,
+                limit,
+                count: clients.length,
+                data: clients.map(c => ({
+                    ...c,
+                    initial: c.firmName ? c.firmName.charAt(0).toUpperCase() : '?'
+                }))
+            });
+        }
+
         // 2. Fetch Related Data (Services)
         const clientIds = clients.map(c => c._id);
 
-        const [cylinders, nocs, amcs, amcVisits] = await Promise.all([
+        const [cylinders, nocs, amcs, amcVisits, products] = await Promise.all([
             gasSilinder.find({ clientId: { $in: clientIds } })
                 .populate('category', 'name')
                 .sort({ endDate: -1 }).lean(),
@@ -231,7 +251,10 @@ const getAllClients = asyncHandler(
             AMC.find({ clientId: { $in: clientIds } })
                 .sort({ endDate: -1 }).lean(),
             amcVisit.find({ clientId: { $in: clientIds } })
-                .sort({ visitDate: -1 }).lean()
+                .sort({ visitDate: -1 }).lean(),
+            clientProduct.find({ clientId: { $in: clientIds } })
+                .populate('products.productId', 'productName')
+                .sort({ createdAt: -1 }).lean()
         ]);
 
         // 3. Map Data to Clients
@@ -240,6 +263,7 @@ const getAllClients = asyncHandler(
             const clientNocs = nocs.filter(n => String(n.clientId) === String(client._id));
             const clientAmcs = amcs.filter(a => String(a.clientId) === String(client._id));
             const clientAmcVisits = amcVisits.filter(av => String(av.clientId) === String(client._id));
+            const clientProducts = products.filter(p => String(p.clientId) === String(client._id));
 
             // Determine Active Services
             const services = [];
@@ -286,7 +310,16 @@ const getAllClients = asyncHandler(
                     expiryDate: av.visitDate,
                     status: 'COMPLETED',
                     notes: av.notes
-                }))
+                })),
+                ...clientProducts.flatMap(cp => (cp.products || []).map(p => ({
+                    _id: cp._id, // Notice wrapper _id
+                    type: 'PRODUCTS',
+                    category: p.productId?.productName || 'Product',
+                    startDate: cp.createdAt,
+                    expiryDate: null,
+                    status: 'N/A',
+                    notes: `Quantity: ${p.quantity}`
+                })))
             ].sort((a, b) => new Date(b.createdAt || b.startDate) - new Date(a.createdAt || a.startDate)); // Sort by newest
 
             // Determine Status (Simple Logic: If any critical expiry < 7 days -> CRITICAL, else SECURE)

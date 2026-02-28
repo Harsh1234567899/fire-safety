@@ -13,7 +13,7 @@ const DocumentSchema = new mongoose.Schema({
   contentType: { type: String },
   serviceType: {
     type: String,
-    enum: ["noc","amc"],
+    enum: ["noc","amc","product"],
     required: true
   }
 }, { timestamps: true });

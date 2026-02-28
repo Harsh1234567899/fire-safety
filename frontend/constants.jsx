@@ -5,7 +5,8 @@ import {
     BarChart3,
     MessageSquare,
     Settings,
-    UserCog
+    UserCog,
+    Mail
 } from "lucide-react"
 
 export const SIDEBAR_ITEMS = [
@@ -14,6 +15,7 @@ export const SIDEBAR_ITEMS = [
     { label: "Clients", icon: Users, path: "/clients", roles: ["admin", "manager", "godown-manager"] },
     { label: "Reports", icon: BarChart3, path: "/reports", roles: ["admin", "manager"] },
     { label: "Manager Console", icon: MessageSquare, path: "/console", roles: ["admin", "manager"] },
+    { label: "Contact Requests", icon: Mail, path: "/reach", roles: ["admin"] },
     { label: "Settings", icon: Settings, path: "/settings", roles: ["admin"] },
     { label: "Employee", icon: UserCog, path: "/staff", roles: ["admin"] }
 ]
