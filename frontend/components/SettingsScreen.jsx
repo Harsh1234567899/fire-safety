@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Settings, FlaskConical, FileText, Plus, Trash2, Scale, Settings2, X, Edit2 } from 'lucide-react';
-import { getGasCategories, getNocTypes, createGasSubCategory, deleteGasSubCategory, createNocType, deleteNocType, updateGasSubCategory, updateNocType } from '../api/category';
-import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../api/product';
+import { getGasCategories, getNocTypes, createGasSubCategory, deleteGasSubCategory, createNocType, deleteNocType, updateGasSubCategory, updateNocType } from '../services/category';
+import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../services/product';
 import CustomDropdown from './CustomDropdown.jsx';
 
 const SettingsScreen = () => {

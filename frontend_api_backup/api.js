@@ -8,6 +8,14 @@ const apiClient = axios.create({
   withCredentials: true, // send cookies
 });
 
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -21,11 +29,16 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const response = await apiClient.post("/api/v1/auth/refresh-token");
-        const { accessToken } = response.data.data;
+        const refreshTokenPayload = localStorage.getItem('refreshToken');
+        const response = await apiClient.post("/api/v1/auth/refresh-token", { refreshToken: refreshTokenPayload });
+        const { accessToken, refreshToken } = response.data.data;
 
-        // If your app uses localStorage for something, update it here.
-        // But since we use cookies, just retrying is often enough if cookie is set.
+        // Update tokens for iOS fallback
+        if (accessToken) localStorage.setItem('adminToken', accessToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+
+        // Update original request with new token
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         return apiClient(originalRequest);
       } catch (refreshError) {

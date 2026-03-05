@@ -14,7 +14,7 @@ import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
-import { downloadClientDirectory, getAllClients } from '../api/client.js';
+import { downloadClientDirectory, getAllClients } from '../services/client.js';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const dispatch = useDispatch();

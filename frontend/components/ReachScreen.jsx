@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Loader2, Copy, Trash2, Mail, Phone, Calendar, RefreshCw } from 'lucide-react';
-import { getAllReach, deleteReach } from '../api/reach';
+import { getAllReach, deleteReach } from '../services/reach';
 import toast from 'react-hot-toast';
 
 const ReachScreen = () => {

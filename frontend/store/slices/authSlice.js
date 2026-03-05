@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { login } from '../../api/auth';
+import { login } from '../../services/auth';
 
 export const loginUser = createAsyncThunk(
     'auth/login',
@@ -38,6 +38,7 @@ const authSlice = createSlice({
             state.user = null;
             state.isAuthenticated = false;
             localStorage.removeItem('adminToken');
+            localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
         },
         // We'll hydrate from localStorage in App.jsx or here if we added thunks, 
@@ -69,6 +70,7 @@ const authSlice = createSlice({
                 }
                 state.isAuthenticated = true;
                 localStorage.setItem('adminToken', action.payload?.data?.accessToken); // Store token if needed for non-cookie auth
+                localStorage.setItem('refreshToken', action.payload?.data?.refreshToken); // Store refresh token for fallback (iOS)
                 localStorage.setItem('user', JSON.stringify(state.user));
             })
             .addCase(loginUser.rejected, (state, action) => {

@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bell, X, ChevronRight, AlertCircle, CheckCircle, Info, Menu, RefreshCw } from 'lucide-react';
 import { MOCK_NOTIFICATIONS } from '../constants';
-import { searchClients } from '../api/client';
-import { getNotifications, markAllRead as apiMarkAllRead } from '../api/notification';
+import { searchClients } from '../services/client';
+import { getNotifications, markAllRead as apiMarkAllRead } from '../services/notification';
 
 const Header = ({ clients, onNavigateToClient, toggleSidebar }) => {
     const [searchQuery, setSearchQuery] = useState('');

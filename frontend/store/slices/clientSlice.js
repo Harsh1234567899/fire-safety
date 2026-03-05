@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAllClients, updateClient as apiUpdateClient } from '../../api/client';
+import { getAllClients, updateClient as apiUpdateClient } from '../../services/client';
 
 export const fetchClients = createAsyncThunk(
     'clients/fetchClients',

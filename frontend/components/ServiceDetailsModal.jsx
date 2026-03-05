@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, User, Building, Box, FileText, ShieldCheck, Clock, Layers, Hash, ExternalLink, Paperclip, PenTool } from 'lucide-react';
-import { getServiceById } from '../api/service';
+import { getServiceById } from '../services/service';
 import { toast } from 'react-hot-toast';
 
 const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, CheckCircle, Trash2, UserPlus, ShieldAlert, X, Lock, Key, Mail, Hash, Loader, Edit } from 'lucide-react';
-import { getAllUsers } from '../api/user';
-import { registerUser, deleteUser, updateUser, updatePassword } from '../api/auth';
+import { getAllUsers } from '../services/user';
+import { registerUser, deleteUser, updateUser, updatePassword } from '../services/auth';
 import { toast } from 'react-hot-toast';
 
 const StaffScreen = () => {

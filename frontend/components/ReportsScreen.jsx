@@ -4,9 +4,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { fetchClients } from '../store/slices/clientSlice';
 import CustomDropdown from './CustomDropdown.jsx';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
-import { downloadCylinderReport } from '../api/fireExtinguisher.js';
-import { downloadNOCReport } from '../api/fireNoc.js';
-import { downloadAMCReport } from '../api/amc.js';
+import { downloadCylinderReport } from '../services/fireExtinguisher.js';
+import { downloadNOCReport } from '../services/fireNoc.js';
+import { downloadAMCReport } from '../services/amc.js';
 
 const ReportsScreen = () => {
     const dispatch = useDispatch();

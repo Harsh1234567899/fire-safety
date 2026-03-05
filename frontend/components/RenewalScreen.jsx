@@ -9,17 +9,17 @@ import {
 import CustomDropdown from './CustomDropdown.jsx';
 import CertificateTemplate from './CertificateTemplate.jsx';
 import { createRoot } from 'react-dom/client';
-import { searchClients } from '../api/client';
-import { createCylinder, updateCylinder } from '../api/fireExtinguisher';
-import { createNOC, updateNOC } from '../api/fireNoc';
-import { createAMC, updateAMC } from '../api/amc';
-import { createAmcVisit, updateAmcVisit } from '../api/amcVisit';
-import { getClientServices } from '../api/service';
+import { searchClients } from '../services/client';
+import { createCylinder, updateCylinder } from '../services/fireExtinguisher';
+import { createNOC, updateNOC } from '../services/fireNoc';
+import { createAMC, updateAMC } from '../services/amc';
+import { createAmcVisit, updateAmcVisit } from '../services/amcVisit';
+import { getClientServices } from '../services/service';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
-import { getGasCategories, getNocTypes } from '../api/category';
-import { createClientProducts } from '../api/clientProduct';
-import { getAllProducts } from '../api/product';
-import { uploadDocument, deleteDocument } from '../api/document';
+import { getGasCategories, getNocTypes } from '../services/category';
+import { createClientProducts } from '../services/clientProduct';
+import { getAllProducts } from '../services/product';
+import { uploadDocument, deleteDocument } from '../services/document';
 import { toast } from 'react-hot-toast';
 
 

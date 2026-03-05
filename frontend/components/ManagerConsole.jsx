@@ -2,9 +2,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, Filter, MessageCircle, AlertCircle, Clock, CheckSquare, Square, X, Loader2 } from 'lucide-react';
 import CustomDropdown from './CustomDropdown.jsx';
-import { getAllCylinders } from '../api/fireExtinguisher.js';
-import { getAllNOCs } from '../api/fireNoc.js';
-import { getAllAMCs } from '../api/amc.js';
+import { getAllCylinders } from '../services/fireExtinguisher.js';
+import { getAllNOCs } from '../services/fireNoc.js';
+import { getAllAMCs } from '../services/amc.js';
 
 const ManagerConsole = () => {
     const [followUpItems, setFollowUpItems] = useState([]);
