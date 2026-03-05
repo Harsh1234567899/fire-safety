@@ -18,14 +18,14 @@ const ReportsScreen = () => {
 
     // Auto-refresh clients when screen mounts or pagination changes
     React.useEffect(() => {
-        dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit }));
+        dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit, lite: false }));
     }, [dispatch, currentPage, pageLimit]);
 
     // Handle initial search trigger (debounce)
     React.useEffect(() => {
         setCurrentPage(1);
         const delayDebounceFn = setTimeout(() => {
-            dispatch(fetchClients({ query: searchTerm, page: 1, limit: pageLimit }));
+            dispatch(fetchClients({ query: searchTerm, page: 1, limit: pageLimit, lite: false }));
         }, 500);
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, dispatch, pageLimit]);
@@ -225,6 +225,7 @@ const ReportsScreen = () => {
         setServiceFilter('All Services');
         setSearchTerm('');
         setDateRange({ from: null, to: null });
+        dispatch(fetchClients({ lite: false }));
     };
 
     return (
@@ -310,7 +311,7 @@ const ReportsScreen = () => {
 
                     <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
                         <button
-                            onClick={() => dispatch(fetchClients(''))}
+                            onClick={() => dispatch(fetchClients({ lite: false }))}
                             className="flex items-center justify-center gap-2 border px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-sm whitespace-nowrap bg-white border-gray-200 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 text-gray-700 flex-1 sm:flex-none"
                         >
                             <RefreshCw size={16} className={loading ? "animate-spin text-blue-600" : "text-gray-400"} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, FlaskConical, FileText, Plus, Trash2, Scale, Settings2, X, Edit2 } from 'lucide-react';
+import { Settings, FlaskConical, FileText, Plus, Trash2, Scale, Settings2, X, Edit2, Loader2 } from 'lucide-react';
 import { getGasCategories, getNocTypes, createGasSubCategory, deleteGasSubCategory, createNocType, deleteNocType, updateGasSubCategory, updateNocType } from '../services/category';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../services/product';
 import CustomDropdown from './CustomDropdown.jsx';
@@ -19,14 +19,33 @@ const SettingsScreen = () => {
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const [gasRes, nocRes, prodRes] = await Promise.all([getGasCategories(), getNocTypes(), getAllProducts()]);
+            const results = await Promise.allSettled([
+                getGasCategories(),
+                getNocTypes(),
+                getAllProducts()
+            ]);
 
-            const categories = gasRes.data?.data || [];
-            const allSubCats = categories.flatMap(cat => cat.subcategories || []);
-            setGasItems(allSubCats);
+            const [gasRes, nocRes, prodRes] = results;
 
-            setNocItems(nocRes.data?.data || []);
-            setProductItems(prodRes.data?.data || []);
+            if (gasRes.status === 'fulfilled') {
+                const categories = gasRes.value.data?.data || [];
+                const allSubCats = categories.flatMap(cat => cat.subcategories || []);
+                setGasItems(allSubCats);
+            } else {
+                console.error("Failed to fetch gas categories", gasRes.reason);
+            }
+
+            if (nocRes.status === 'fulfilled') {
+                setNocItems(nocRes.value.data?.data || []);
+            } else {
+                console.error("Failed to fetch NOC types", nocRes.reason);
+            }
+
+            if (prodRes.status === 'fulfilled') {
+                setProductItems(prodRes.value.data?.data || []);
+            } else {
+                console.error("Failed to fetch products", prodRes.reason);
+            }
         } catch (e) {
             console.error("Failed to fetch settings", e);
         } finally {
@@ -267,7 +286,13 @@ const SettingsScreen = () => {
                         </button>
                     </div>
 
-                    {activeTab === 'GAS' ? renderList(gasItems, 'GAS') : activeTab === 'PRODUCT' ? renderList(productItems, 'PRODUCT') : renderList(nocItems, 'NOC')}
+                    {loading ? (
+                        <div className="flex justify-center items-center py-20">
+                            <Loader2 size={32} className="animate-spin text-red-500" />
+                        </div>
+                    ) : (
+                        activeTab === 'GAS' ? renderList(gasItems, 'GAS') : activeTab === 'PRODUCT' ? renderList(productItems, 'PRODUCT') : renderList(nocItems, 'NOC')
+                    )}
                 </div>
             </div>
 

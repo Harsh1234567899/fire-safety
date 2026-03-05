@@ -3,9 +3,9 @@ import { getAllClients, updateClient as apiUpdateClient } from '../../services/c
 
 export const fetchClients = createAsyncThunk(
     'clients/fetchClients',
-    async ({ query = '', page = 1, limit = 25 } = {}, { rejectWithValue }) => {
+    async ({ query = '', page = 1, limit = 25, lite = true } = {}, { rejectWithValue }) => {
         try {
-            const response = await getAllClients({ q: query, page, limit, lite: true });
+            const response = await getAllClients({ q: query, page, limit, lite });
             // Assuming response.data contains { data: [...clients], total, page, limit }
             return {
                 data: response.data?.data || [],
