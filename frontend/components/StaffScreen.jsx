@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Shield, ShieldCheck, CheckCircle, Trash2, UserPlus, ShieldAlert, X, Lock, Key, Mail, Hash, Loader, Edit } from 'lucide-react';
 import { getAllUsers } from '../services/user';
 import { registerUser, deleteUser, updateUser, updatePassword } from '../services/auth';
@@ -8,21 +8,22 @@ const StaffScreen = () => {
     const [staffMembers, setStaffMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const hasFetched = useRef(false);
 
     useEffect(() => {
+        if (hasFetched.current) return;
+        hasFetched.current = true;
+
         const fetchUsers = async () => {
             try {
                 const response = await getAllUsers();
-                // Map backend user model to UI model if needed, or use directly
-                // Backend: { _id, name, email, systemId, role, createdBy, ... }
-                // UI expects: { id, name, email, systemId, role, status, initial }
                 const mappedUsers = response.data?.data?.map(u => ({
                     id: u._id,
                     name: u.name,
                     email: u.email,
                     systemId: u.systemId,
-                    role: u.role.toUpperCase(), // Map backend string to UI format
-                    status: 'ACTIVE', // Default status as backend might not have it yet
+                    role: u.role.toUpperCase(),
+                    status: 'ACTIVE',
                     initial: u.name.charAt(0).toUpperCase()
                 })) || [];
                 setStaffMembers(mappedUsers);

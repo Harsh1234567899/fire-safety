@@ -7,28 +7,25 @@ import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { downloadCylinderReport } from '../services/fireExtinguisher.js';
 import { downloadNOCReport } from '../services/fireNoc.js';
 import { downloadAMCReport } from '../services/amc.js';
+import { downloadAllServicesReport } from '../services/allService.js';
 
 const ReportsScreen = () => {
     const dispatch = useDispatch();
     const { items: clients, loading, pagination } = useSelector(state => state.clients);
+    const hasFetched = useRef(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageLimit, setPageLimit] = useState(25);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-    // Auto-refresh clients when screen mounts or pagination changes
+    // Auto-refresh clients once on first mount, then only on explicit Refresh
     React.useEffect(() => {
-        dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit, lite: false }));
-    }, [dispatch, currentPage, pageLimit]);
-
-    // Handle initial search trigger (debounce)
-    React.useEffect(() => {
-        setCurrentPage(1);
-        const delayDebounceFn = setTimeout(() => {
-            dispatch(fetchClients({ query: searchTerm, page: 1, limit: pageLimit, lite: false }));
-        }, 500);
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, dispatch, pageLimit]);
+        if (hasFetched.current) return;
+        hasFetched.current = true;
+        // Only fetch if we don't have full ledger data yet
+        const hasLedger = clients && clients.length > 0 && clients[0]?.ledger !== undefined;
+        if (!hasLedger) {
+            dispatch(fetchClients({ query: '', page: 1, limit: 200, lite: false }));
+        }
+    }, [dispatch]);
 
     // Transform clients data into flat report items
     const reportItems = useMemo(() => {
@@ -44,13 +41,13 @@ const ReportsScreen = () => {
             const cylinders = client.ledger?.filter(item => item && item.type === 'CYLINDERS') || [];
             cylinders.forEach(cyl => {
                 if (!cyl) return;
-                const assetName = cyl.category ? (typeof cyl.category === 'object' ? cyl.category.name : cyl.category) : 'Unknown Cylinder';
+                const categoryName = cyl.category && cyl.category !== 'Unknown' ? cyl.category : '';
                 items.push({
                     id: cyl._id || cyl.id || `${client.id}-cyl-${Math.random()}`,
                     firmName,
                     contactName,
-                    assetType: 'Cylinder',
-                    assetName: assetName || 'Unknown Cylinder',
+                    assetType: 'Fire Extinguisher',
+                    assetName: categoryName || 'Fire Extinguisher',
                     location: city,
                     quantity: cyl.serialNumbers?.length || 1,
                     renewalDate: cyl.expiryDate ? new Date(cyl.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
@@ -63,13 +60,12 @@ const ReportsScreen = () => {
             const nocs = client.ledger?.filter(item => item && item.type === 'NOC') || [];
             nocs.forEach(noc => {
                 if (!noc) return;
-                const assetName = noc.category ? (typeof noc.category === 'object' ? noc.category.name : noc.category) : 'Fire NOC';
                 items.push({
                     id: noc._id || noc.id || `${client.id}-noc-${Math.random()}`,
                     firmName,
                     contactName,
                     assetType: 'NOC',
-                    assetName: assetName || 'Fire NOC',
+                    assetName: 'Fire NOC',
                     location: city,
                     quantity: 1,
                     renewalDate: noc.expiryDate ? new Date(noc.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
@@ -82,13 +78,12 @@ const ReportsScreen = () => {
             const amcs = client.ledger?.filter(item => item && item.type === 'AMC') || [];
             amcs.forEach(amc => {
                 if (!amc) return;
-                const assetName = amc.category ? (typeof amc.category === 'object' ? amc.category.name : amc.category) : 'AMC Contract';
                 items.push({
                     id: amc._id || amc.id || `${client.id}-amc-${Math.random()}`,
                     firmName,
                     contactName,
                     assetType: 'AMC',
-                    assetName: assetName || 'AMC Contract',
+                    assetName: 'AMC',
                     location: city,
                     quantity: 1,
                     renewalDate: amc.expiryDate ? new Date(amc.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
@@ -102,13 +97,15 @@ const ReportsScreen = () => {
 
     const items = reportItems; // Alias for existing code compatibility
 
-    const [complianceFilter, setComplianceFilter] = useState('All Compliance');
     const [serviceFilter, setServiceFilter] = useState('All Services');
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [dateRange, setDateRange] = useState({ from: null, to: null });
     const [dateError, setDateError] = useState('');
     const startDateRef = useRef(null);
     const endDateRef = useRef(null);
+
+    // Derived: is a specific service selected (not 'All')
+    const isSpecificService = serviceFilter !== 'All Services';
 
     // Modal State
     const [selectedServiceId, setSelectedServiceId] = useState(null);
@@ -136,13 +133,6 @@ const ReportsScreen = () => {
         }
     }, [dateRange]);
 
-    // Derive unique values
-    const uniqueCompliance = useMemo(() => ['All Compliance', ...Array.from(new Set(items.map(i => i.status)))], [items]);
-
-    const uniqueServices = useMemo(() => {
-        const types = new Set(items.map(i => i.assetType));
-        return ['All Services', ...Array.from(types)];
-    }, [items]);
 
     const filteredItems = useMemo(() => {
         return items.filter(item => {
@@ -153,16 +143,12 @@ const ReportsScreen = () => {
                 (item.contactName && item.contactName.toLowerCase().includes(searchLower)) ||
                 (item.assetName && item.assetName.toLowerCase().includes(searchLower));
 
-            // Filters
-            const matchesCompliance = complianceFilter === 'All Compliance' || item.status === complianceFilter;
-
-            // Mapping Service Type for clearer filtering
+            // Service Type filter
             const matchesService = serviceFilter === 'All Services' || item.assetType === serviceFilter;
 
-
-            return matchesSearch && matchesCompliance && matchesService;
+            return matchesSearch && matchesService;
         });
-    }, [items, searchTerm, complianceFilter, serviceFilter]);
+    }, [items, searchTerm, serviceFilter]);
 
     const toggleSelectAll = () => {
         if (selectedIds.size === filteredItems.length && filteredItems.length > 0) {
@@ -186,8 +172,7 @@ const ReportsScreen = () => {
         try {
             const payload = {};
             if (searchTerm) payload.firmName = searchTerm;
-            if (complianceFilter !== 'All Compliance') payload.status = complianceFilter.toLowerCase();
-            if (selectedIds.size > 0) {
+            if (isSpecificService && selectedIds.size > 0) {
                 payload.ids = Array.from(selectedIds);
             }
             // Include date filters
@@ -195,7 +180,9 @@ const ReportsScreen = () => {
             if (dateRange?.to) payload.endDate = dateRange.to.toISOString().split('T')[0];
 
             let response;
-            if (serviceFilter === 'NOC') {
+            if (serviceFilter === 'All Services') {
+                response = await downloadAllServicesReport(payload);
+            } else if (serviceFilter === 'NOC') {
                 response = await downloadNOCReport(payload);
             } else if (serviceFilter === 'AMC') {
                 response = await downloadAMCReport(payload);
@@ -221,11 +208,9 @@ const ReportsScreen = () => {
 
 
     const clearFilters = () => {
-        setComplianceFilter('All Compliance');
         setServiceFilter('All Services');
         setSearchTerm('');
         setDateRange({ from: null, to: null });
-        dispatch(fetchClients({ lite: false }));
     };
 
     return (
@@ -345,18 +330,9 @@ const ReportsScreen = () => {
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <div className="w-full sm:w-auto sm:min-w-[170px]">
                                 <CustomDropdown
-                                    value={complianceFilter}
-                                    onChange={setComplianceFilter}
-                                    options={['All Compliance', 'Active', 'Expiring Soon', 'Expired']}
-                                    className="text-xs font-bold uppercase tracking-wider"
-                                />
-                            </div>
-
-                            <div className="w-full sm:w-auto sm:min-w-[170px]">
-                                <CustomDropdown
                                     value={serviceFilter}
                                     onChange={setServiceFilter}
-                                    options={['All Services', 'Cylinders', 'NOC', 'AMC']}
+                                    options={['All Services', 'Fire Extinguisher', 'NOC', 'AMC']}
                                     className="text-xs font-bold uppercase tracking-wider"
                                 />
                             </div>
@@ -385,22 +361,14 @@ const ReportsScreen = () => {
                 <div className="overflow-x-auto custom-scrollbar">
                     <div className="min-w-[1000px]">
                         {/* Table Header */}
-                        <div className="grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center">
-                            <div className="col-span-1">
-                                <input
-                                    type="checkbox"
-                                    checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
-                                    onChange={toggleSelectAll}
-                                    className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                />
-                            </div>
-                            <div className="col-span-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Corporate Identity</div>
-                            <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asset / Service</div>
-                            <div className="col-span-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</div>
-                            <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Qty</div>
-                            <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Renewal Date</div>
-                            <div className="col-span-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Risk Profile</div>
-                            <div className="col-span-1 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Action</div>
+                        <div className={`grid ${isSpecificService ? 'grid-cols-[32px_2fr_1fr_1fr_1fr_1fr_60px]' : 'grid-cols-[3fr_1fr_1fr_1fr_1fr_60px]'} px-8 py-6 border-b border-gray-100 bg-gray-50/30 items-center gap-4`}>
+                            {isSpecificService && <div className="text-center"><input type="checkbox" checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer" /></div>}
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Corporate Identity</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Service</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Renewal</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</div>
+                            <div className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Action</div>
                         </div>
 
                         {/* Table Body */}
@@ -408,61 +376,61 @@ const ReportsScreen = () => {
                             {filteredItems.map((item) => (
                                 <div
                                     key={item.id}
-                                    className={`grid grid-cols-[40px_repeat(11,minmax(0,1fr))] px-8 py-6 items-center transition-colors group ${selectedIds.has(item.id) ? 'bg-red-50/30' : 'hover:bg-gray-50/50'}`}
+                                    className={`grid ${isSpecificService ? 'grid-cols-[32px_2fr_1fr_1fr_1fr_1fr_60px]' : 'grid-cols-[3fr_1fr_1fr_1fr_1fr_60px]'} px-8 py-5 items-center transition-colors group gap-4 ${selectedIds.has(item.id) ? 'bg-red-50/30' : 'hover:bg-gray-50/50'}`}
                                 >
                                     {/* Checkbox */}
-                                    <div className="col-span-1">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.has(item.id)}
-                                            onChange={() => toggleSelectItem(item.id)}
-                                            className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                        />
-                                    </div>
+                                    {isSpecificService && (
+                                        <div className="text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(item.id)}
+                                                onChange={() => toggleSelectItem(item.id)}
+                                                className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                            />
+                                        </div>
+                                    )}
 
                                     {/* Identity */}
-                                    <div className="col-span-3">
-                                        <h4 className="text-sm font-bold text-gray-900 mb-0.5">{item.firmName}</h4>
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.contactName}</p>
+                                    <div className="min-w-0">
+                                        <h4 className="text-sm font-bold text-gray-900 mb-0.5 truncate">{item.firmName}</h4>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">{item.contactName}</p>
                                     </div>
 
-                                    {/* Asset/Service */}
-                                    <div className="col-span-2 flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.assetType === 'NOC' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
-                                            {item.assetType === 'NOC' ? <FileText size={16} /> : <Box size={16} />}
+                                    {/* Service */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center ${item.assetType === 'NOC' ? 'bg-blue-50 text-blue-500' : item.assetType === 'AMC' ? 'bg-purple-50 text-purple-500' : 'bg-orange-50 text-orange-500'}`}>
+                                            {item.assetType === 'NOC' ? <FileText size={14} /> : item.assetType === 'AMC' ? <ShieldCheck size={14} /> : <Box size={14} />}
                                         </div>
-                                        <span className="text-xs font-bold text-gray-700 truncate">{item.assetName}</span>
+                                        <div className="min-w-0">
+                                            <span className="text-xs font-bold text-gray-700">{item.assetType}</span>
+                                            {item.assetType === 'Fire Extinguisher' && item.assetName && <p className="text-[10px] text-gray-400 truncate">{item.assetName}</p>}
+                                        </div>
                                     </div>
 
                                     {/* Location */}
-                                    <div className="col-span-2">
-                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{item.location}</span>
-                                    </div>
-
-                                    {/* Quantity */}
-                                    <div className="col-span-1">
-                                        <span className="text-xs font-bold text-gray-900">{item.quantity || '-'}</span>
+                                    <div className="min-w-0">
+                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide truncate block">{item.location}</span>
                                     </div>
 
                                     {/* Renewal Date */}
-                                    <div className="col-span-1 flex items-center gap-2">
-                                        <Calendar size={14} className="text-gray-300" />
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar size={12} className="text-gray-300 flex-shrink-0" />
                                         <span className="text-xs font-bold text-gray-600 tabular-nums">{item.renewalDate}</span>
                                     </div>
 
                                     {/* Status */}
-                                    <div className="col-span-1">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${item.status === 'ACTIVE'
+                                    <div>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${item.status === 'ACTIVE'
                                             ? 'bg-green-50 text-green-600 border-green-100'
                                             : 'bg-red-50 text-red-600 border-red-100'
                                             }`}>
-                                            {item.status === 'ACTIVE' ? <ShieldCheck size={12} /> : <AlertCircle size={12} />}
+                                            {item.status === 'ACTIVE' ? <ShieldCheck size={10} /> : <AlertCircle size={10} />}
                                             {item.status}
                                         </span>
                                     </div>
 
                                     {/* Action */}
-                                    <div className="col-span-1 text-right">
+                                    <div className="text-right">
                                         <button
                                             onClick={() => handleViewDetails(item)}
                                             className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
@@ -483,48 +451,11 @@ const ReportsScreen = () => {
                     </div>
                 </div>
 
-                {/* Pagination Controls */}
-                <div className="border-t border-gray-100 bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
-                        <span>
-                            Showing {((pagination?.currentPage || 1) - 1) * (pagination?.limit || 25) + 1} to {Math.min((pagination?.currentPage || 1) * (pagination?.limit || 25), pagination?.totalItems || 0)} of {pagination?.totalItems || 0}
-                        </span>
-                        <div className="flex items-center gap-2">
-                            <span>Rows per page:</span>
-                            <select
-                                value={pageLimit}
-                                onChange={(e) => {
-                                    setPageLimit(Number(e.target.value));
-                                }}
-                                className="bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-2 py-1 outline-none focus:border-red-500 cursor-pointer"
-                            >
-                                <option value={25}>25</option>
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                                <option value={200}>200</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
-                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
-                        >
-                            Previous
-                        </button>
-                        <span className="flex items-center justify-center min-w-[32px] h-8 rounded-lg bg-red-50 text-red-600 text-xs font-bold">
-                            {currentPage} / {pagination?.totalPages || 1}
-                        </span>
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.min(pagination?.totalPages || 1, prev + 1))}
-                            disabled={currentPage >= (pagination?.totalPages || 1)}
-                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
-                        >
-                            Next
-                        </button>
-                    </div>
+                {/* Record Count */}
+                <div className="border-t border-gray-100 bg-white px-6 py-4 flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-500">
+                        Showing {filteredItems.length} of {items.length} records
+                    </span>
                 </div>
             </div>
 

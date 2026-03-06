@@ -71,6 +71,12 @@ app.use('/api/v16/notifications', notificationRouter)
 import clientProductRouter from './routes/clientProduct.routes.js'
 app.use('/api/v17/client-product', clientProductRouter)
 
+import allServiceExportRouter from './routes/allServiceExport.routes.js'
+app.use('/api/v18/all-service', allServiceExportRouter)
+
+import excelImportRouter from './routes/excelImport.routes.js'
+app.use('/api/v19/excel-import', excelImportRouter)
+
 app.use(errorHandler)
 
 export default app 

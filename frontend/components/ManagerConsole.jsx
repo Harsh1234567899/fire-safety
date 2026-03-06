@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, MapPin, Filter, MessageCircle, AlertCircle, Clock, CheckSquare, Square, X, Loader2 } from 'lucide-react';
 import CustomDropdown from './CustomDropdown.jsx';
 import { getAllCylinders } from '../services/fireExtinguisher.js';
@@ -10,12 +10,14 @@ const ManagerConsole = () => {
     const [followUpItems, setFollowUpItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [locationFilter, setLocationFilter] = useState('All Cities');
     const [urgencyFilter, setUrgencyFilter] = useState('All Urgency');
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const hasFetched = useRef(false);
 
-    // Fetch all cylinders, NOCs, and AMCs on mount
+    // Fetch all cylinders, NOCs, and AMCs - only once on first mount
     useEffect(() => {
+        if (hasFetched.current) return;
+        hasFetched.current = true;
         const fetchAllData = async () => {
             setLoading(true);
             try {
@@ -117,9 +119,8 @@ const ManagerConsole = () => {
         fetchAllData();
     }, []);
 
-    // Derive unique options from data
-    const locations = useMemo(() => ['All Cities', ...Array.from(new Set(followUpItems.map(i => i.location).filter(Boolean)))], [followUpItems]);
-    const urgencies = useMemo(() => ['All Urgency', ...Array.from(new Set(followUpItems.map(i => i.status)))], [followUpItems]);
+    // Hardcoded urgency options
+    const urgencies = ['All Urgency', 'Overdue', 'Critical', 'Upcoming'];
 
     const filteredItems = useMemo(() => {
         return followUpItems.filter(item => {
@@ -129,12 +130,11 @@ const ManagerConsole = () => {
                 (item.contactName || '').toLowerCase().includes(lower) ||
                 (item.location || '').toLowerCase().includes(lower);
 
-            const matchesLocation = locationFilter === 'All Cities' || item.location === locationFilter;
             const matchesUrgency = urgencyFilter === 'All Urgency' || item.status === urgencyFilter;
 
-            return matchesSearch && matchesLocation && matchesUrgency;
+            return matchesSearch && matchesUrgency;
         });
-    }, [searchTerm, locationFilter, urgencyFilter, followUpItems]);
+    }, [searchTerm, urgencyFilter, followUpItems]);
 
     const toggleSelectAll = () => {
         if (selectedIds.size === filteredItems.length && filteredItems.length > 0) {
@@ -206,17 +206,6 @@ const ManagerConsole = () => {
                 </div>
 
                 <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar w-full md:w-auto">
-                    {/* Location Dropdown */}
-                    <div className="flex-shrink-0 flex-1 md:flex-none md:min-w-[160px]">
-                        <CustomDropdown
-                            value={locationFilter}
-                            onChange={setLocationFilter}
-                            options={locations}
-                            icon={MapPin}
-                            className="text-xs font-semibold uppercase tracking-wide"
-                        />
-                    </div>
-
                     {/* Urgency Dropdown */}
                     <div className="flex-shrink-0 flex-1 md:flex-none md:min-w-[160px]">
                         <CustomDropdown

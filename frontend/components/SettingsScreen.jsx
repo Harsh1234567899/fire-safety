@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Settings, FlaskConical, FileText, Plus, Trash2, Scale, Settings2, X, Edit2, Loader2 } from 'lucide-react';
 import { getGasCategories, getNocTypes, createGasSubCategory, deleteGasSubCategory, createNocType, deleteNocType, updateGasSubCategory, updateNocType } from '../services/category';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../services/product';
@@ -10,9 +10,12 @@ const SettingsScreen = () => {
     const [nocItems, setNocItems] = useState([]);
     const [productItems, setProductItems] = useState([]);
     const [loading, setLoading] = useState(false);
+    const hasFetched = useRef(false);
 
-    // Initial Fetch
+    // Initial Fetch - only once
     useEffect(() => {
+        if (hasFetched.current) return;
+        hasFetched.current = true;
         fetchSettings();
     }, []);
 

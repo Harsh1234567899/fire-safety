@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, Copy, Trash2, Mail, Phone, Calendar, RefreshCw } from 'lucide-react';
 import { getAllReach, deleteReach } from '../services/reach';
 import toast from 'react-hot-toast';
@@ -7,6 +7,7 @@ const ReachScreen = () => {
     const [reaches, setReaches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const hasFetched = useRef(false);
 
     const fetchReaches = async () => {
         setLoading(true);
@@ -30,6 +31,8 @@ const ReachScreen = () => {
     };
 
     useEffect(() => {
+        if (hasFetched.current) return;
+        hasFetched.current = true;
         fetchReaches();
     }, []);
 

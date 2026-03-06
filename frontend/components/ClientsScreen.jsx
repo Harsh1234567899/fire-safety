@@ -90,9 +90,14 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     };
 
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const hasFetched = useRef(false);
 
     // Auto-refresh clients when screen mounts or pagination parameters change
     useEffect(() => {
+        if (!hasFetched.current) {
+            hasFetched.current = true;
+            if (clients.length > 0) return; // Data already loaded from App.jsx
+        }
         dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit }));
     }, [dispatch, currentPage, pageLimit]);
 
@@ -105,13 +110,17 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
         }
     }, [location.state, navigate, location.pathname]);
 
-    // Handle initial search trigger (debounce optional, implemented manually via enter/button initially if needed)
+    // Handle search debounce - skip initial mount
+    const isFirstSearch = useRef(true);
     useEffect(() => {
-        // Reset to page 1 on new search
+        if (isFirstSearch.current) {
+            isFirstSearch.current = false;
+            return; // Skip the initial mount, data already loaded
+        }
         setCurrentPage(1);
         const delayDebounceFn = setTimeout(() => {
             dispatch(fetchClients({ query: searchTerm, page: 1, limit: pageLimit }));
-        }, 500); // 500ms debounce
+        }, 500);
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, dispatch, pageLimit]);
 
