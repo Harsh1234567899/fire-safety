@@ -1,27 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Loader2, Copy, Trash2, Mail, Phone, Calendar, RefreshCw } from 'lucide-react';
 import { getAllReach, deleteReach } from '../services/reach';
 import toast from 'react-hot-toast';
+import { dataCache } from '../utils/dataCache';
 
 const ReachScreen = () => {
     const [reaches, setReaches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const hasFetched = useRef(false);
 
-    const fetchReaches = async () => {
+    const fetchReaches = async (forceRefresh = false) => {
+        if (!forceRefresh && dataCache.has('reaches')) {
+            setReaches(dataCache.get('reaches'));
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const data = await getAllReach();
+            let result = [];
             if (data?.data?.data) {
-                setReaches(data.data.data);
+                result = data.data.data;
             } else if (data?.data) {
-                setReaches(data.data);
+                result = data.data;
             } else if (Array.isArray(data)) {
-                setReaches(data);
-            } else {
-                setReaches([]);
+                result = data;
             }
+            setReaches(result);
+            dataCache.set('reaches', result);
         } catch (error) {
             console.error("Failed to fetch reach data:", error);
             toast.error("Failed to load contact requests");
@@ -31,8 +37,6 @@ const ReachScreen = () => {
     };
 
     useEffect(() => {
-        if (hasFetched.current) return;
-        hasFetched.current = true;
         fetchReaches();
     }, []);
 
@@ -73,7 +77,7 @@ const ReachScreen = () => {
                 </div>
                 <div className="flex gap-3 w-full sm:w-auto">
                     <button
-                        onClick={fetchReaches}
+                        onClick={() => fetchReaches(true)}
                         className="flex items-center justify-center gap-2 bg-white border border-gray-200 px-4 py-2.5 rounded-xl font-bold text-xs text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all uppercase tracking-widest shadow-sm flex-1 sm:flex-none"
                     >
                         <RefreshCw size={16} className={loading ? "animate-spin text-red-600" : ""} /> Refresh

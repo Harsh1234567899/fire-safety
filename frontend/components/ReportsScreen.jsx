@@ -8,23 +8,23 @@ import { downloadCylinderReport } from '../services/fireExtinguisher.js';
 import { downloadNOCReport } from '../services/fireNoc.js';
 import { downloadAMCReport } from '../services/amc.js';
 import { downloadAllServicesReport } from '../services/allService.js';
+import { dataCache } from '../utils/dataCache';
 
 const ReportsScreen = () => {
     const dispatch = useDispatch();
     const { items: clients, loading, pagination } = useSelector(state => state.clients);
-    const hasFetched = useRef(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [showMobileFilters, setShowMobileFilters] = useState(false);
 
     // Auto-refresh clients once on first mount, then only on explicit Refresh
     React.useEffect(() => {
-        if (hasFetched.current) return;
-        hasFetched.current = true;
+        if (dataCache.has('reports_fetched')) return;
         // Only fetch if we don't have full ledger data yet
         const hasLedger = clients && clients.length > 0 && clients[0]?.ledger !== undefined;
         if (!hasLedger) {
             dispatch(fetchClients({ query: '', page: 1, limit: 200, lite: false }));
         }
+        dataCache.set('reports_fetched', true);
     }, [dispatch]);
 
     // Transform clients data into flat report items
@@ -414,7 +414,7 @@ const ReportsScreen = () => {
 
                                     {/* Renewal Date */}
                                     <div className="flex items-center gap-1.5">
-                                        <Calendar size={12} className="text-gray-300 flex-shrink-0" />
+                                       
                                         <span className="text-xs font-bold text-gray-600 tabular-nums">{item.renewalDate}</span>
                                     </div>
 

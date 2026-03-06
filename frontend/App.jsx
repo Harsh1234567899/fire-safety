@@ -16,6 +16,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import NotFoundScreen from './components/NotFoundScreen';
 import ExcelImportModal from './components/ExcelImportModal';
 import { Toaster } from 'react-hot-toast';
+import { dataCache } from './utils/dataCache';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser, logout } from './store/slices/authSlice';
@@ -51,6 +52,7 @@ const App = () => {
     };
 
     const handleSignOut = () => {
+        dataCache.clearAll();
         dispatch(logout());
         navigate('/login', { replace: true });
     };

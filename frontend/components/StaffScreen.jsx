@@ -1,18 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, CheckCircle, Trash2, UserPlus, ShieldAlert, X, Lock, Key, Mail, Hash, Loader, Edit } from 'lucide-react';
 import { getAllUsers } from '../services/user';
 import { registerUser, deleteUser, updateUser, updatePassword } from '../services/auth';
 import { toast } from 'react-hot-toast';
+import { dataCache } from '../utils/dataCache';
 
 const StaffScreen = () => {
     const [staffMembers, setStaffMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const hasFetched = useRef(false);
 
     useEffect(() => {
-        if (hasFetched.current) return;
-        hasFetched.current = true;
+        if (dataCache.has('staff')) {
+            setStaffMembers(dataCache.get('staff'));
+            setLoading(false);
+            return;
+        }
 
         const fetchUsers = async () => {
             try {
@@ -27,6 +30,7 @@ const StaffScreen = () => {
                     initial: u.name.charAt(0).toUpperCase()
                 })) || [];
                 setStaffMembers(mappedUsers);
+                dataCache.set('staff', mappedUsers);
             } catch (err) {
                 console.error("Failed to fetch staff", err);
                 setError("Failed to load staff members");

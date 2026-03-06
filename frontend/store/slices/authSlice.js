@@ -13,7 +13,18 @@ export const loginUser = createAsyncThunk(
     }
 );
 
-const savedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+// Check if this is a fresh tab (sessionStorage clears on tab close)
+const isSessionAlive = sessionStorage.getItem('sessionAlive');
+let savedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+
+// If user data exists but session is not alive → tab was closed, force re-login
+if (savedUser && !isSessionAlive) {
+    savedUser = null;
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+}
+
 if (savedUser && savedUser.role) {
     const r = savedUser.role.toLowerCase().replace(/[-\s_]+/g, '');
     if (r === 'godownmanager') savedUser.role = 'godown-manager';
@@ -22,7 +33,7 @@ if (savedUser && savedUser.role) {
 }
 
 const initialState = {
-    user: savedUser, // Restore user if exists
+    user: savedUser,
     isAuthenticated: !!savedUser,
 };
 
@@ -40,6 +51,7 @@ const authSlice = createSlice({
             localStorage.removeItem('adminToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
+            sessionStorage.removeItem('sessionAlive');
         },
         // We'll hydrate from localStorage in App.jsx or here if we added thunks, 
         // but simple sync action is enough if App handles the initialization check
@@ -69,9 +81,10 @@ const authSlice = createSlice({
                     else if (r === 'admin') state.user.role = 'admin';
                 }
                 state.isAuthenticated = true;
-                localStorage.setItem('adminToken', action.payload?.data?.accessToken); // Store token if needed for non-cookie auth
-                localStorage.setItem('refreshToken', action.payload?.data?.refreshToken); // Store refresh token for fallback (iOS)
+                localStorage.setItem('adminToken', action.payload?.data?.accessToken);
+                localStorage.setItem('refreshToken', action.payload?.data?.refreshToken);
                 localStorage.setItem('user', JSON.stringify(state.user));
+                sessionStorage.setItem('sessionAlive', 'true');
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.loading = false;

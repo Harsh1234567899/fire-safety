@@ -111,22 +111,20 @@ const Sidebar = ({ isOpen, onClose, onSignOut, onImportExcel }) => {
                                 </Link>
                             );
                         })}
+                        {(userRole === 'admin' || userRole === 'manager') && (
+                            <button
+                                onClick={() => { onClose(); onImportExcel?.(); }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all group text-slate-500 hover:bg-slate-800/30 hover:text-slate-300 hover:translate-x-1"
+                            >
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800/40 text-slate-600 group-hover:text-slate-400 transition-all">
+                                    <Upload size={16} />
+                                </div>
+                                Import Excel
+                            </button>
+                        )}
                     </div>
 
                 </nav>
-
-                {/* Import Data Button */}
-                {(userRole === 'admin' || userRole === 'manager') && (
-                    <div className="px-4 pb-2 relative z-10">
-                        <button
-                            onClick={() => { onClose(); onImportExcel?.(); }}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-emerald-600/10 border border-slate-800/50 hover:border-emerald-500/30 transition-all uppercase tracking-widest"
-                        >
-                            <Upload size={16} />
-                            Import Excel
-                        </button>
-                    </div>
-                )}
 
                 <div className="p-6 border-t border-slate-800/50 space-y-4 relative z-10 bg-slate-900/40 backdrop-blur-sm">
                     <div className="bg-slate-800/30 rounded-2xl p-3 flex items-center gap-3 border border-slate-700/30">

@@ -15,6 +15,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
 import { downloadClientDirectory, getAllClients } from '../services/client.js';
+import { dataCache } from '../utils/dataCache';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const dispatch = useDispatch();
@@ -90,14 +91,17 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     };
 
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const hasFetched = useRef(false);
 
-    // Auto-refresh clients when screen mounts or pagination parameters change
+    // Auto-refresh clients when screen mounts - use dataCache to prevent redundant calls
     useEffect(() => {
-        if (!hasFetched.current) {
-            hasFetched.current = true;
-            if (clients.length > 0) return; // Data already loaded from App.jsx
+        if (dataCache.has('clients_fetched')) {
+            return; // Already fetched this session
         }
+        if (clients.length > 0) {
+            dataCache.set('clients_fetched', true);
+            return; // Data already loaded from App.jsx
+        }
+        dataCache.set('clients_fetched', true);
         dispatch(fetchClients({ query: searchTerm, page: currentPage, limit: pageLimit }));
     }, [dispatch, currentPage, pageLimit]);
 
@@ -110,11 +114,10 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
         }
     }, [location.state, navigate, location.pathname]);
 
-    // Handle search debounce - skip initial mount
-    const isFirstSearch = useRef(true);
+    // Handle search debounce - skip initial mount using dataCache
     useEffect(() => {
-        if (isFirstSearch.current) {
-            isFirstSearch.current = false;
+        if (!dataCache.has('clients_search_active')) {
+            dataCache.set('clients_search_active', true);
             return; // Skip the initial mount, data already loaded
         }
         setCurrentPage(1);

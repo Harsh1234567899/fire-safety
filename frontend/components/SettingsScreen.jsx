@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings, FlaskConical, FileText, Plus, Trash2, Scale, Settings2, X, Edit2, Loader2 } from 'lucide-react';
 import { getGasCategories, getNocTypes, createGasSubCategory, deleteGasSubCategory, createNocType, deleteNocType, updateGasSubCategory, updateNocType } from '../services/category';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../services/product';
 import CustomDropdown from './CustomDropdown.jsx';
+import { dataCache } from '../utils/dataCache';
 
 const SettingsScreen = () => {
     const [activeTab, setActiveTab] = useState('GAS');
@@ -10,12 +11,16 @@ const SettingsScreen = () => {
     const [nocItems, setNocItems] = useState([]);
     const [productItems, setProductItems] = useState([]);
     const [loading, setLoading] = useState(false);
-    const hasFetched = useRef(false);
 
-    // Initial Fetch - only once
+    // Restore from cache or fetch fresh
     useEffect(() => {
-        if (hasFetched.current) return;
-        hasFetched.current = true;
+        if (dataCache.has('settings')) {
+            const cached = dataCache.get('settings');
+            setGasItems(cached.gasItems || []);
+            setNocItems(cached.nocItems || []);
+            setProductItems(cached.productItems || []);
+            return;
+        }
         fetchSettings();
     }, []);
 
@@ -29,26 +34,32 @@ const SettingsScreen = () => {
             ]);
 
             const [gasRes, nocRes, prodRes] = results;
+            let gas = [], noc = [], prod = [];
 
             if (gasRes.status === 'fulfilled') {
                 const categories = gasRes.value.data?.data || [];
-                const allSubCats = categories.flatMap(cat => cat.subcategories || []);
-                setGasItems(allSubCats);
+                gas = categories.flatMap(cat => cat.subcategories || []);
+                setGasItems(gas);
             } else {
                 console.error("Failed to fetch gas categories", gasRes.reason);
             }
 
             if (nocRes.status === 'fulfilled') {
-                setNocItems(nocRes.value.data?.data || []);
+                noc = nocRes.value.data?.data || [];
+                setNocItems(noc);
             } else {
                 console.error("Failed to fetch NOC types", nocRes.reason);
             }
 
             if (prodRes.status === 'fulfilled') {
-                setProductItems(prodRes.value.data?.data || []);
+                prod = prodRes.value.data?.data || [];
+                setProductItems(prod);
             } else {
                 console.error("Failed to fetch products", prodRes.reason);
             }
+
+            // Cache the results
+            dataCache.set('settings', { gasItems: gas, nocItems: noc, productItems: prod });
         } catch (e) {
             console.error("Failed to fetch settings", e);
         } finally {

@@ -1,10 +1,11 @@
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, Filter, MessageCircle, AlertCircle, Clock, CheckSquare, Square, X, Loader2 } from 'lucide-react';
 import CustomDropdown from './CustomDropdown.jsx';
 import { getAllCylinders } from '../services/fireExtinguisher.js';
 import { getAllNOCs } from '../services/fireNoc.js';
 import { getAllAMCs } from '../services/amc.js';
+import { dataCache } from '../utils/dataCache';
 
 const ManagerConsole = () => {
     const [followUpItems, setFollowUpItems] = useState([]);
@@ -12,12 +13,15 @@ const ManagerConsole = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [urgencyFilter, setUrgencyFilter] = useState('All Urgency');
     const [selectedIds, setSelectedIds] = useState(new Set());
-    const hasFetched = useRef(false);
 
-    // Fetch all cylinders, NOCs, and AMCs - only once on first mount
+    // Fetch all cylinders, NOCs, and AMCs - cache across route changes
     useEffect(() => {
-        if (hasFetched.current) return;
-        hasFetched.current = true;
+        if (dataCache.has('console')) {
+            setFollowUpItems(dataCache.get('console'));
+            setLoading(false);
+            return;
+        }
+
         const fetchAllData = async () => {
             setLoading(true);
             try {
@@ -109,6 +113,7 @@ const ManagerConsole = () => {
                 // Sort: Overdue first, then Critical, then Upcoming
                 items.sort((a, b) => a.daysLate - b.daysLate);
                 setFollowUpItems(items);
+                dataCache.set('console', items);
             } catch (err) {
                 console.error('ManagerConsole fetch error:', err);
             } finally {
