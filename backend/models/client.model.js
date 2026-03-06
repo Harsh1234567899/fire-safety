@@ -21,13 +21,13 @@ const clientSchema = new mongoose.Schema({
     },
     contactNumber: {
         type: String,
-        required: true,
+        required: false,
         match: /^[0-9]{10}$/,
         index: true
     },
     email: {
         type: String,
-        required: true,
+        required: false,
         lowercase: true,
         trim: true,
         match: [/^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/, 'Please fill a valid email address'],

@@ -119,8 +119,6 @@ const importExcelData = asyncHandler(async (req, res) => {
             existing = await client.create({
                 firmName,
                 contactPerson: firmName,
-                contactNumber: '0000000000',
-                email: `${firmName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'import'}@import.local`,
                 address: city || 'Imported',
                 city: city || '',
                 createdBy: undefined
