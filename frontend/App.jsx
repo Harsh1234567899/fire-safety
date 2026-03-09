@@ -37,11 +37,25 @@ const App = () => {
 
     // Initial Data Fetch - Protected (fetch once on login with full data)
     useEffect(() => {
+        // --- Security Cleanup: Aggressively remove legacy localStorage tokens ---
+        // We moved to HttpOnly cookies, so we need to ensure old tokens are cleared 
+        // immediately so they don't interfere or pose an XSS risk.
+        if (localStorage.getItem('adminToken') || localStorage.getItem('refreshToken')) {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('refreshToken');
+            // If they had raw tokens but no session, force them to login fresh with cookies
+            if (!sessionStorage.getItem('sessionAlive')) {
+                dispatch(logout());
+                navigate('/login', { replace: true });
+                return;
+            }
+        }
+
         if (currentUser) {
             dispatch(fetchClients({ limit: 200, lite: false }));
             dispatch(fetchDashboardData());
         }
-    }, [dispatch, currentUser]);
+    }, [dispatch, currentUser, navigate]);
 
     // Helper: get default route based on role
     const getDefaultRoute = () => {

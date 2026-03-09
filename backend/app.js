@@ -5,9 +5,28 @@ import { errorHandler } from "./middlewares/errorHandler.middlewares.js";
 
 
 const app = express()
+
+import helmet from "helmet";
+import rateLimit from 'express-rate-limit';
+
+// Global Rate Limiting - 1000 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', globalLimiter);
+
+// Security Middlewares
+app.use(helmet()); // Set standard security headers
+
 app.use(cors({
   origin: process.env.CORS_ORIGIN.split(','),
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }))
 
 

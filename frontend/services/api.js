@@ -9,10 +9,8 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  // Let the browser send the HttpOnly cookies automatically
+  // (withCredentials is set to true above)
   return config;
 });
 
@@ -47,8 +45,8 @@ apiClient.interceptors.response.use(
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+        }).then(() => {
+          // Browser will automatically attach the new HttpOnly cookies
           return apiClient(originalRequest);
         }).catch((err) => {
           return Promise.reject(err);
@@ -59,20 +57,14 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshTokenPayload = localStorage.getItem('refreshToken');
-        const response = await apiClient.post("/api/v1/auth/refresh-token", {
-          refreshToken: refreshTokenPayload,
-        });
-        const { accessToken, refreshToken } = response.data.data;
-
-        if (accessToken) localStorage.setItem('adminToken', accessToken);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        // The refresh endpoint reads the refreshToken from the HttpOnly cookie
+        // and sets the new accessToken and refreshToken via Set-Cookie headers automatically.
+        await apiClient.post("/api/v1/auth/refresh-token");
 
         // Notify all queued requests that the refresh succeeded
-        processQueue(null, accessToken);
+        processQueue(null, true);
 
-        // Retry the original request
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        // Retry the original request (browser will automatically send the new cookies)
         return apiClient(originalRequest);
       } catch (refreshError) {
         // Notify all queued requests that refresh failed

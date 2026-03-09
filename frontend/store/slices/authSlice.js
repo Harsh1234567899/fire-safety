@@ -20,8 +20,6 @@ let savedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('
 // If user data exists but session is not alive → tab was closed, force re-login
 if (savedUser && !isSessionAlive) {
     savedUser = null;
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
 }
 
@@ -48,8 +46,6 @@ const authSlice = createSlice({
         logout: (state) => {
             state.user = null;
             state.isAuthenticated = false;
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
             sessionStorage.removeItem('sessionAlive');
         },
@@ -81,8 +77,6 @@ const authSlice = createSlice({
                     else if (r === 'admin') state.user.role = 'admin';
                 }
                 state.isAuthenticated = true;
-                localStorage.setItem('adminToken', action.payload?.data?.accessToken);
-                localStorage.setItem('refreshToken', action.payload?.data?.refreshToken);
                 localStorage.setItem('user', JSON.stringify(state.user));
                 sessionStorage.setItem('sessionAlive', 'true');
             })
