@@ -311,15 +311,46 @@ const getAllClients = asyncHandler(
                     status: 'COMPLETED',
                     notes: av.notes
                 })),
-                ...clientProducts.flatMap(cp => (cp.products || []).map(p => ({
-                    _id: cp._id, // Notice wrapper _id
-                    type: 'PRODUCTS',
-                    category: p.productId?.productName || 'Product',
-                    startDate: cp.createdAt,
-                    expiryDate: null,
-                    status: 'N/A',
-                    notes: `Quantity: ${p.quantity}`
-                })))
+                ...Object.values((clientProducts || []).reduce((acc, cp) => {
+                    (cp.products || []).forEach(p => {
+                        // Use sub-item timestamp if available (from bug-merged docs), else parent doc createdAt
+                        let pDate = cp.createdAt;
+                        if (p._id) {
+                            try {
+                                pDate = new mongoose.Types.ObjectId(String(p._id)).getTimestamp();
+                            } catch (e) {
+                                pDate = cp.createdAt;
+                            }
+                        }
+                        const dateKey = pDate ? new Date(pDate).toISOString().slice(0, 10) : 'Unknown';
+
+                        const idKey = `products_${cp.clientId}_${dateKey}`;
+
+                        if (!acc[dateKey]) {
+                            acc[dateKey] = {
+                                _id: idKey,
+                                type: 'PRODUCTS',
+                                category: 'Products',
+                                startDate: pDate,
+                                expiryDate: null,
+                                status: 'N/A',
+                                notes: [],
+                                products: []
+                            };
+                        }
+
+                        acc[dateKey].products.push({
+                            details: p.productId,
+                            quantity: p.quantity
+                        });
+                        acc[dateKey].quantity = (acc[dateKey].quantity || 0) + p.quantity;
+                        acc[dateKey].notes.push(`${p.productId?.productName || 'Product'} (Qty: ${p.quantity})`);
+                    });
+                    return acc;
+                }, {})).map(group => ({
+                    ...group,
+                    notes: group.notes.join(', ')
+                }))
             ].sort((a, b) => new Date(b.createdAt || b.startDate) - new Date(a.createdAt || a.startDate)); // Sort by newest
 
             // Determine Status (Simple Logic: If any critical expiry < 7 days -> CRITICAL, else SECURE)

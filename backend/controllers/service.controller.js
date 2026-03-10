@@ -234,15 +234,35 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
         }
       },
       { $unwind: { path: "$productObj", preserveNullAndEmptyArrays: true } },
-      // Group back together to present one ledger record per purchase basket
+      // Create a field for the sub-item's own timestamp
+      {
+        $addFields: {
+          productPurchaseDate: {
+            $ifNull: [
+              { $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$products._id" } } },
+              { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }
+            ]
+          }
+        }
+      },
+      // Group back together by clientId and the calculated productPurchaseDate
       {
         $group: {
-          _id: "$_id",
+          _id: {
+            $concat: [
+              "products_",
+              { $toString: "$clientId" },
+              "_",
+              "$productPurchaseDate"
+            ]
+          },
           clientId: { $first: "$clientId" },
           model: { $first: "$model" },
           service: { $first: "$service" },
-          endDate: { $first: "$endDate" },
-          createdAt: { $first: "$createdAt" },
+          // Use the purchase date for both sorting and identification
+          createdAt: { $first: { $toDate: "$productPurchaseDate" } },
+          startDate: { $first: { $toDate: "$productPurchaseDate" } },
+          itemDate: { $first: "$productPurchaseDate" },
           productsArray: {
             $push: {
               productId: "$products.productId",
@@ -261,6 +281,7 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
       },
       { $project: { productsArray: 0 } }
     ];
+
 
     // Combined pipeline starting from fireextinguishers collection
     const pipeline = [
@@ -372,6 +393,80 @@ const getClientServicesWithDetails = asyncHandler(async (req, res) => {
 const getServiceById = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`[getServiceById] Fetching record for ID: ${id}`);
+
+    if (id === 'new_products_basket') {
+      return res.json({ success: true, record: { model: 'CLIENT_PRODUCT', products: [], notes: 'New Purchase (Unsaved)' } });
+    }
+
+    if (id.startsWith("products_")) {
+      const parts = id.split("_");
+      // Format is products_CLIENTID_YYYY-MM-DD
+      const clientId = parts[1];
+      const dateKey = parts[2];
+
+      const objectClientId = new mongoose.Types.ObjectId(clientId);
+
+      const records = await db.collection("clientproducts").aggregate([
+        { $match: { clientId: objectClientId } },
+        { $unwind: "$products" },
+        {
+          $addFields: {
+            pDate: {
+              $ifNull: [
+                { $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$products._id" } } },
+                { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }
+              ]
+            }
+          }
+        },
+        { $match: { pDate: dateKey } },
+        {
+          $lookup: {
+            from: "products",
+            localField: "products.productId",
+            foreignField: "_id",
+            as: "productObj"
+          }
+        },
+        { $unwind: { path: "$productObj", preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: dateKey,
+            clientId: { $first: "$clientId" },
+            createdAt: { $first: { $toDate: "$pDate" } },
+            startDate: { $first: { $toDate: "$pDate" } },
+            updatedAt: { $first: "$updatedAt" },
+            products: {
+              $push: {
+                productId: "$products.productId",
+                quantity: "$products.quantity",
+                details: "$productObj"
+              }
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: "clients",
+            localField: "clientId",
+            foreignField: "_id",
+            as: "clientData"
+          }
+        },
+        { $unwind: { path: "$clientData", preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            model: "CLIENT_PRODUCT",
+            service: "Products Purchased",
+            endDate: null
+          }
+        }
+      ]).toArray();
+
+      if (records[0]) return res.json({ success: true, record: records[0] });
+      return res.status(404).json({ success: false, message: "Product record not found" });
+    }
 
     monoIdIsValid(id)
 

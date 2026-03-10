@@ -607,14 +607,18 @@ const RegisterFirmScreen = ({ onRegister }) => {
                 startDate: formatDateDisplay(a.startDate),
                 expiryDate: formatDateDisplay(a.expiry)
             })),
-            ...products.map(p => ({
-                id: p.id,
+            // Group all initially purchased products as a single session checkout
+            ...(products.length > 0 ? [{
+                id: 'new_products_basket',
                 type: 'PRODUCTS',
-                category: availableProducts.find(ap => ap._id === p.productId)?.productName || 'Product',
-                startDate: 'N/A',
+                category: 'Initial Purchase',
+                startDate: new Date().toISOString().slice(0, 10),
                 expiryDate: 'N/A',
-                quantity: p.qty
-            }))
+                products: products.map(p => ({
+                    details: { productName: availableProducts.find(ap => ap._id === p.productId)?.productName || 'Product' },
+                    quantity: p.qty
+                }))
+            }] : [])
         ];
     };
 
@@ -641,7 +645,8 @@ const RegisterFirmScreen = ({ onRegister }) => {
                     filename: `Sahaj_Certificate_${firmDetails.firmName.replace(/\s+/g, '_')}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2, useCORS: true, logging: false },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
                 };
 
                 try {
@@ -1240,32 +1245,39 @@ const RegisterFirmScreen = ({ onRegister }) => {
                                             <div key={ap._id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between gap-4 group hover:border-emerald-100 transition-all h-full">
                                                 <span className="text-sm font-bold text-gray-900 line-clamp-2" title={ap.productName}>{ap.productName}</span>
                                                 <div className="flex justify-end mt-auto">
-                                                    {addedItem ? (
-                                                        <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (addedItem.qty > 1) {
-                                                                        updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty - 1);
+                                                    <div className="flex flex-col gap-1.5 w-full max-w-[120px]">
+                                                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">Quantity</label>
+                                                        <div className="relative group/input">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="0"
+                                                                value={addedItem ? addedItem.qty : ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value.replace(/\D/g, '');
+                                                                    if (val && parseInt(val) > 0) {
+                                                                        const qty = parseInt(val);
+                                                                        if (addedItem) {
+                                                                            updateItem(addedItem.id, 'PRODUCTS', 'qty', qty);
+                                                                        } else {
+                                                                            setProducts([...products, { id: Date.now().toString() + Math.random(), productId: ap._id, qty }]);
+                                                                        }
                                                                     } else {
-                                                                        removeItem(addedItem.id, 'PRODUCTS');
+                                                                        if (addedItem) {
+                                                                            removeItem(addedItem.id, 'PRODUCTS');
+                                                                        }
                                                                     }
                                                                 }}
-                                                                className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors font-bold shadow-sm"
-                                                            >-</button>
-                                                            <span className="w-6 text-center text-sm font-bold text-gray-900">{addedItem.qty}</span>
-                                                            <button
-                                                                onClick={() => updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty + 1)}
-                                                                className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors font-bold shadow-sm"
-                                                            >+</button>
+                                                                className={`w-full bg-gray-50 rounded-xl px-4 py-2.5 text-sm font-bold outline-none border transition-all text-center
+                                                                    ${addedItem
+                                                                        ? 'border-emerald-200 bg-emerald-50/30 text-emerald-700 shadow-sm'
+                                                                        : 'border-gray-100 focus:border-blue-200 text-gray-400 focus:text-gray-900'
+                                                                    }`}
+                                                            />
+                                                            {addedItem && (
+                                                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm" />
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => setProducts([...products, { id: Date.now().toString(), productId: ap._id, qty: 1 }])}
-                                                            className="px-6 py-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border border-emerald-100"
-                                                        >
-                                                            Add
-                                                        </button>
-                                                    )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );

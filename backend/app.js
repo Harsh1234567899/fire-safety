@@ -96,6 +96,9 @@ app.use('/api/v18/all-service', allServiceExportRouter)
 import excelImportRouter from './routes/excelImport.routes.js'
 app.use('/api/v19/excel-import', excelImportRouter)
 
+import whatsappRouter from './routes/whatsapp.routes.js'
+app.use('/api/v20/whatsapp', whatsappRouter)
+
 app.use(errorHandler)
 
 export default app 

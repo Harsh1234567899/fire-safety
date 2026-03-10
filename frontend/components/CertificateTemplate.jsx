@@ -10,7 +10,7 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
     const totalQty = ledgerItems.reduce((acc, curr) => acc + (curr.quantity || curr.serialNumbers?.length || 1), 0);
 
     return (
-        <div id="certificate-print-area" className="bg-white p-0 m-0 w-[210mm] h-[296mm] overflow-hidden mx-auto text-gray-900 font-sans relative">
+        <div id="certificate-print-area" className="bg-white p-0 m-0 w-[210mm] mx-auto text-gray-900 font-sans relative">
             {/* Header Section */}
             <div className="flex justify-between items-start pt-10 px-12 mb-8 relative">
                 <div className="flex flex-col items-center">
@@ -83,10 +83,14 @@ const CertificateTemplate = ({ client, ledgerItems }) => {
                     </thead>
                     <tbody className="divide-y-[1.5px] divide-black">
                         {ledgerItems.map((item, idx) => (
-                            <tr key={idx}>
+                            <tr key={idx} className="break-inside-avoid break-after-auto">
                                 <td className="border-r-[1.5px] border-black px-4 py-2 text-xs font-bold text-center">{(idx + 1).toString().padStart(2, '0')}</td>
                                 <td className="border-r-[1.5px] border-black px-4 py-2 text-xs font-bold uppercase">
-                                    {item.type === 'CYLINDERS' ? `FIRE EXTINGUISHER ${item.category} TYPE` : `${item.type}: ${item.category}`}
+                                    {item.type === 'CYLINDERS'
+                                        ? `FIRE EXTINGUISHER ${item.category || item.assetName} TYPE`
+                                        : (item.type === 'PRODUCTS' || item.type === 'PRODUCT')
+                                            ? `PRODUCT: ${item.products?.length > 0 ? item.products.map(p => `${p.details?.productName || 'UNKNOWN PRODUCT'} (Qty: ${p.quantity || 1})`).join(', ') : (item.category === 'Product' ? 'UNKNOWN PRODUCT' : item.category || 'UNKNOWN PRODUCT')}`
+                                            : `${item.type}: ${item.category || item.assetName || item.name}`}
 
                                     {/* Serial Number Display Logic */}
                                     {item.serialNumbers && item.serialNumbers.length > 0 && (

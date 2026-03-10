@@ -25,6 +25,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
     const { user } = useSelector(state => state.auth);
     const userRole = user?.role;
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedLedgerIds, setSelectedLedgerIds] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageLimit, setPageLimit] = useState(25);
 
@@ -366,7 +367,13 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
 
     const handleViewAllClientPDF = async (client) => {
         if (isDownloading) return;
-        const ledgerItems = (client.ledger || []).map(item => ({
+        // Use selected ledger items if checkboxes are ticked, otherwise use all.
+        let itemsToExport = client.ledger || [];
+        if (selectedLedgerIds.length > 0) {
+            itemsToExport = itemsToExport.filter(item => selectedLedgerIds.includes(item._id || item.id));
+        }
+
+        const ledgerItems = itemsToExport.map(item => ({
             ...item,
             // normalise fields the CertificateTemplate expects
             type: item.type || 'CYLINDERS',
@@ -395,11 +402,12 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
             const element = container.querySelector('#certificate-print-area');
             if (element) {
                 const worker = html2pdf().set({
-                    margin: 0,
+                    margin: [5, 0, 5, 0], // Top/Bottom margins for auto page-breaks
                     filename: `Certificate_${client.firmName.replace(/\s+/g, '_')}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2 },
-                    jsPDF: { unit: 'mm', format: 'a4' }
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
                 }).from(element);
                 const pdfBlob = await worker.output('bloburl');
                 window.open(pdfBlob, '_blank');
@@ -445,7 +453,7 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
         return (
             <div className="animate-in fade-in slide-in-from-right-8 duration-500 h-full flex flex-col">
                 <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <button onClick={() => setSelectedClient(null)} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase hover:text-gray-900 transition-colors tracking-widest w-fit"><ArrowLeft size={16} />Back to Directory</button>
+                    <button onClick={() => { setSelectedClient(null); setSelectedLedgerIds([]); }} className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase hover:text-gray-900 transition-colors tracking-widest w-fit"><ArrowLeft size={16} />Back to Directory</button>
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                         <button
                             onClick={() => handleViewAllClientPDF(selectedClient)}
@@ -483,6 +491,11 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h3 className="text-lg font-bold">Active Asset Ledger</h3>
+                                {selectedLedgerIds.length > 0 && (
+                                    <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">
+                                        {selectedLedgerIds.length} item{selectedLedgerIds.length === 1 ? '' : 's'} selected for PDF
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <div className="space-y-6">
@@ -497,9 +510,21 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                     <div
                                         key={idx}
                                         onClick={() => handleViewServiceDetails(item._id || item.id)}
-                                        className={`p-6 bg-gray-50 rounded-3xl border border-transparent transition-all group hover:border-blue-100 hover:bg-blue-50/30 cursor-pointer`}
+                                        className={`p-6 bg-gray-50 rounded-3xl border border-transparent transition-all group hover:border-blue-100 hover:bg-blue-50/30 cursor-pointer relative`}
                                     >
-                                        <div className="flex items-center justify-between mb-4">
+                                        <div
+                                            className="absolute top-6 right-6 z-10"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const id = item._id || item.id;
+                                                setSelectedLedgerIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+                                            }}
+                                        >
+                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer ${selectedLedgerIds.includes(item._id || item.id) ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300 bg-white hover:border-red-400'}`}>
+                                                {selectedLedgerIds.includes(item._id || item.id) && <Check size={14} />}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between mb-4 pr-8">
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'CYLINDERS' ? 'bg-orange-50 text-orange-500' :
                                                     item.type === 'NOC' ? 'bg-blue-50 text-blue-500' :

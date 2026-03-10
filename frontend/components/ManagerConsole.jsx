@@ -6,6 +6,8 @@ import { getAllCylinders } from '../services/fireExtinguisher.js';
 import { getAllNOCs } from '../services/fireNoc.js';
 import { getAllAMCs } from '../services/amc.js';
 import { dataCache } from '../utils/dataCache';
+import api from '../services/api.js';
+import { toast } from 'react-hot-toast';
 
 const ManagerConsole = () => {
     const [followUpItems, setFollowUpItems] = useState([]);
@@ -159,9 +161,51 @@ const ManagerConsole = () => {
         setSelectedIds(newSelected);
     };
 
-    const handleBulkWhatsApp = () => {
-        const count = selectedIds.size;
-        alert(`Initiating bulk WhatsApp reminders to ${count} contacts...`);
+    const handleBulkWhatsApp = async () => {
+        if (selectedIds.size === 0) return;
+
+        // Find the selected items from the list of followUpItems
+        const selectedItemsData = followUpItems.filter(item => selectedIds.has(item.id));
+
+        let successCount = 0;
+        let failCount = 0;
+
+        const loadingToast = toast.loading(`Sending ${selectedItemsData.length} WhatsApp reminders...`);
+
+        for (const item of selectedItemsData) {
+            try {
+                // Send specific formatted payload that the new backend expects
+                await api.post('/api/v20/whatsapp/send', {
+                    firmName: item.firmName,
+                    type: item.type, // e.g. "CYLINDER", "NOC"
+                    expiryDate: item.targetDate,
+                    phoneNumbers: [item.phone],
+                    companyPhone: import.meta.env.VITE_APP_COMPANY_PHONE
+                });
+                successCount++;
+            } catch (err) {
+                console.error('Failed to send WhatsApp to', item.firmName, err);
+                failCount++;
+            }
+        }
+
+        toast.dismiss(loadingToast);
+
+        if (successCount > 0 && failCount === 0) {
+            toast.success(`Successfully sent ${successCount} WhatsApp reminders!`);
+        } else if (successCount > 0 && failCount > 0) {
+            toast.custom((t) => (
+                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} bg-white border border-gray-100 shadow-xl rounded-2xl flex items-center p-4 min-w-[300px]`}>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-900">Partial Success</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{successCount} sent, {failCount} failed to send.</p>
+                    </div>
+                </div>
+            ));
+        } else {
+            toast.error(`Failed to send ${failCount} reminders. Check network or API configuration.`);
+        }
+
         setSelectedIds(new Set());
     };
 
@@ -316,20 +360,44 @@ const ManagerConsole = () => {
                                                             {item.type}
                                                         </span>
                                                     </div>
-                                                    <button
-                                                        className="bg-[#22c55e] hover:bg-[#16a34a] text-white px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-full flex items-center justify-center gap-2 font-bold text-[11px] tracking-wide shadow-sm transition-all active:scale-95 flex-shrink-0 w-full sm:w-auto"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (item.phone) {
-                                                                window.open(`https://wa.me/91${item.phone}`, '_blank');
-                                                            } else {
-                                                                alert(`No phone number for ${item.contactName}`);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <MessageCircle size={14} fill="white" />
-                                                        WhatsApp
-                                                    </button>
+                                                    <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                                                        <button
+                                                            className="bg-[#22c55e] hover:bg-[#16a34a] text-white px-4 py-2 sm:py-1.5 rounded-xl sm:rounded-full flex items-center justify-center gap-2 font-bold text-[10px] tracking-wide shadow-sm transition-all active:scale-95 flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                const loadingToast = toast.loading(`Sending reminder to ${item.firmName}...`);
+                                                                try {
+                                                                    await api.post('/api/v20/whatsapp/send', {
+                                                                        firmName: item.firmName,
+                                                                        type: item.type,
+                                                                        expiryDate: item.targetDate,
+                                                                        phoneNumbers: [item.phone],
+                                                                        companyPhone: import.meta.env.VITE_APP_COMPANY_PHONE
+                                                                    });
+                                                                    toast.success('Reminder sent via API!', { id: loadingToast });
+                                                                } catch (err) {
+                                                                    toast.error('Failed to send reminder via API.', { id: loadingToast });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MessageCircle size={14} fill="white" />
+                                                            Auto-Send
+                                                        </button>
+
+                                                        <button
+                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-full flex items-center justify-center gap-1.5 font-bold text-[10px] tracking-wide shadow-sm transition-all active:scale-95 flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (item.phone) {
+                                                                    window.open(`https://wa.me/91${item.phone}`, '_blank');
+                                                                } else {
+                                                                    alert(`No phone number for ${item.contactName}`);
+                                                                }
+                                                            }}
+                                                        >
+                                                            Manual WA
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3 flex-wrap">
@@ -383,10 +451,10 @@ const ManagerConsole = () => {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* Removed Bulk Actions Floating Bar */}
-        </div>
+        </div >
     );
 };
 

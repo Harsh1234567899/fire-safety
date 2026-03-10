@@ -208,11 +208,12 @@ const RenewalScreen = ({ onBack }) => {
             }));
 
             const productsFromHistory = (history.products || []).flatMap(item =>
-                (item.products || []).map(p => ({
+                (item.productsArray || item.products || []).map(p => ({
                     id: String(Date.now() + Math.random()), // Unique ID for each product line
                     productId: p.productId,
                     productName: p.details?.productName || 'Unknown Product',
                     qty: p.quantity || 1,
+                    purchasedAt: item.createdAt || item.startDate || item.itemDate, // Use the precise checkout group timestamp
                     isNew: false
                 }))
             );
@@ -309,12 +310,12 @@ const RenewalScreen = ({ onBack }) => {
         }]);
         setAmcVisitsSaved(false);
     };
-    const addProductFromGrid = (productId, productName) => {
+    const addProductFromGrid = (productId, productName, qty = 1) => {
         setProducts(prev => [...prev, {
             id: String(Date.now() + Math.random()),
             productId,
             productName,
-            qty: 1,
+            qty,
             isNew: true,
         }]);
         setProductsSaved(false);
@@ -552,15 +553,16 @@ const RenewalScreen = ({ onBack }) => {
 
     // ── save Products ────────────────────────────────────────────────────
     const handleSaveProducts = async () => {
-        if (!products.length) { toast.error('No Products to save.'); return; }
-        const invalid = products.find(p => !p.productId || !p.qty);
+        const newProducts = products.filter(p => p.isNew);
+        if (!newProducts.length) { toast.error('No new Products to save.'); return; }
+        const invalid = newProducts.find(p => !p.productId || !p.qty);
         if (invalid) { toast.error('Each Product needs a selection and quantity.'); return; }
         setSavingSection('PRODUCTS');
         try {
-            // Upsert the entire products array for this client
+            // Save only the newly added products array for this client
             const payload = {
                 clientId: client._id,
-                products: products.map(p => ({
+                products: newProducts.map(p => ({
                     productId: p.productId,
                     quantity: p.qty,
                     details: '' // Not widely used inside frontend currently
@@ -609,12 +611,24 @@ const RenewalScreen = ({ onBack }) => {
                 serialNumbers: [],
                 startDate: a.startDate, endDate: a.expiry, notes: a.renewalNotes,
             })),
-            ...products.filter(p => p.productId).map(p => ({
-                _id: p.id, type: 'PRODUCTS', category: p.productName || 'Purchased Product',
-                serialNumbers: [],
-                quantity: p.qty,
-                startDate: new Date().toISOString().slice(0, 10), endDate: '', notes: '',
-            })),
+            // Group historic products by precise checkout date string
+            ...Object.values(products.filter(p => p.productId && !p.isNew).reduce((acc, p) => {
+                const dateKey = p.purchasedAt ? new Date(p.purchasedAt).toISOString().slice(0, 10) : 'Past Purchase';
+                if (!acc[dateKey]) {
+                    acc[dateKey] = {
+                        _id: `basket_${dateKey}`, type: 'PRODUCTS', category: dateKey === 'Past Purchase' ? 'Historic Purchase' : `Purchase (${dateKey})`,
+                        serialNumbers: [], startDate: dateKey === 'Past Purchase' ? 'N/A' : dateKey, endDate: 'N/A', notes: '', products: []
+                    };
+                }
+                acc[dateKey].products.push({ details: { productName: p.productName }, quantity: p.qty });
+                return acc;
+            }, {})),
+            // Group newly added products as a single new session checkout
+            ...(products.filter(p => p.productId && p.isNew).length > 0 ? [{
+                _id: 'new_products_basket', type: 'PRODUCTS', category: 'New Purchase',
+                serialNumbers: [], startDate: new Date().toISOString().slice(0, 10), endDate: 'N/A', notes: '',
+                products: products.filter(p => p.productId && p.isNew).map(p => ({ details: { productName: p.productName }, quantity: p.qty }))
+            }] : [])
         ];
         const container = document.createElement('div');
         container.style.cssText = 'position:absolute;left:-9999px;top:0;';
@@ -625,7 +639,7 @@ const RenewalScreen = ({ onBack }) => {
             const el = container.querySelector('#certificate-print-area');
             if (el) {
                 try {
-                    const worker = window.html2pdf().set({ margin: 0, filename: `Renewal_${client.firmName}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }).from(el);
+                    const worker = window.html2pdf().set({ margin: [5, 0, 5, 0], filename: `Renewal_${client.firmName}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'] } }).from(el);
                     const blob = await worker.output('blob');
                     window.open(URL.createObjectURL(blob), '_blank');
                 } catch (e) { toast.error('PDF generation failed.'); }
@@ -1324,14 +1338,29 @@ const RenewalScreen = ({ onBack }) => {
                     {products.filter(p => !p.isNew).length > 0 && (
                         <div className="mb-6">
                             <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">Existing Products (Read-Only)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {products.filter(p => !p.isNew).map(item => (
-                                    <div key={item.id} className="bg-gray-100 p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between gap-4">
-                                        <span className="text-sm font-bold text-gray-600 line-clamp-2" title={item.productName}>{item.productName || 'Unknown Product'}</span>
-                                        <div className="flex justify-start mt-auto">
-                                            <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                                Qty: {item.qty}
-                                            </div>
+                            <div className="flex flex-col gap-8">
+                                {Object.values(products.filter(p => !p.isNew).reduce((acc, p) => {
+                                    const dateKey = p.purchasedAt ? new Date(p.purchasedAt).toISOString().slice(0, 10) : 'Historic';
+                                    if (!acc[dateKey]) acc[dateKey] = { date: dateKey, items: [] };
+                                    acc[dateKey].items.push(p);
+                                    return acc;
+                                }, {})).sort((a, b) => new Date(b.date === 'Historic' ? 0 : b.date) - new Date(a.date === 'Historic' ? 0 : a.date)).map(group => (
+                                    <div key={group.date}>
+                                        <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl mb-4">
+                                            <Calendar size={12} className="text-blue-500" />
+                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Purchased On: {group.date === 'Historic' ? 'Unknown Date' : new Date(group.date).toLocaleDateString('en-GB')}</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {group.items.map(item => (
+                                                <div key={item.id} className="bg-gray-100 p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between gap-4">
+                                                    <span className="text-sm font-bold text-gray-600 line-clamp-2" title={item.productName}>{item.productName || 'Unknown Product'}</span>
+                                                    <div className="flex justify-start mt-auto">
+                                                        <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                                            Qty: {item.qty}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ))}
@@ -1349,32 +1378,39 @@ const RenewalScreen = ({ onBack }) => {
                                     <div key={ap._id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between gap-4 group hover:border-emerald-100 transition-all h-full">
                                         <span className="text-sm font-bold text-gray-900 line-clamp-2" title={ap.productName}>{ap.productName}</span>
                                         <div className="flex justify-end mt-auto">
-                                            {addedItem ? (
-                                                <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                                    <button
-                                                        onClick={() => {
-                                                            if (addedItem.qty > 1) {
-                                                                updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty - 1);
+                                            <div className="flex flex-col gap-1.5 w-full max-w-[120px]">
+                                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">Quantity</label>
+                                                <div className="relative group/input">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="0"
+                                                        value={addedItem ? addedItem.qty : ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            if (val && parseInt(val) > 0) {
+                                                                const qty = parseInt(val);
+                                                                if (addedItem) {
+                                                                    updateItem(addedItem.id, 'PRODUCTS', 'qty', qty);
+                                                                } else {
+                                                                    addProductFromGrid(ap._id, ap.productName, qty);
+                                                                }
                                                             } else {
-                                                                removeItem(addedItem.id, 'PRODUCTS');
+                                                                if (addedItem) {
+                                                                    removeItem(addedItem.id, 'PRODUCTS');
+                                                                }
                                                             }
                                                         }}
-                                                        className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-200 hover:border-red-200 text-gray-600 hover:text-red-500 transition-colors shadow-sm font-bold text-lg"
-                                                    >-</button>
-                                                    <span className="text-sm font-bold w-4 text-center text-gray-900">{addedItem.qty}</span>
-                                                    <button
-                                                        onClick={() => updateItem(addedItem.id, 'PRODUCTS', 'qty', addedItem.qty + 1)}
-                                                        className="w-8 h-8 flex items-center justify-center bg-[#0f172a] hover:bg-slate-800 text-white rounded-lg transition-colors shadow-sm font-bold text-lg"
-                                                    >+</button>
+                                                        className={`w-full bg-gray-50 rounded-xl px-4 py-2.5 text-sm font-bold outline-none border transition-all text-center
+                                                            ${addedItem
+                                                                ? 'border-emerald-200 bg-emerald-50/30 text-emerald-700 shadow-sm'
+                                                                : 'border-gray-100 focus:border-blue-200 text-gray-400 focus:text-gray-900'
+                                                            }`}
+                                                    />
+                                                    {addedItem && (
+                                                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm" />
+                                                    )}
                                                 </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => addProductFromGrid(ap._id, ap.productName)}
-                                                    className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-white border-2 border-dashed border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 rounded-xl transition-all"
-                                                >
-                                                    Add
-                                                </button>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 );

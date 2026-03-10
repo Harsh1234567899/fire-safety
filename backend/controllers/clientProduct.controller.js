@@ -3,6 +3,7 @@ import { ApiError } from '../utils/ApiError.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import { clientProduct } from '../models/clientProduct.model.js'
 import { monoIdIsValid } from '../utils/mongoDBid.js'
+import mongoose from 'mongoose'
 
 const createClientProducts = asyncHandler(async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'manager' && req.user.role !== 'godown-manager') {
@@ -22,23 +23,19 @@ const createClientProducts = asyncHandler(async (req, res) => {
 
     const createdBy = req.user._id;
 
-    // We store all products for a client in a single document
+    // We store products from a single purchase event in its own document
     const productsToInsert = products.map(p => ({
-        productId: p.product,
+        productId: p.product || p.productId,
         quantity: p.quantity
     }));
 
-    const updatedClientProduct = await clientProduct.findOneAndUpdate(
-        { clientId },
-        {
-            clientId,
-            products: productsToInsert,
-            createdBy
-        },
-        { new: true, upsert: true }
-    );
+    const createdClientProduct = await clientProduct.create({
+        clientId,
+        products: productsToInsert,
+        createdBy
+    });
 
-    return res.status(200).json(new ApiResponse(200, updatedClientProduct, 'Client products saved successfully'));
+    return res.status(200).json(new ApiResponse(200, createdClientProduct, 'Client products saved successfully'));
 });
 
 // Used to get all products for a specific client profile view
@@ -47,19 +44,40 @@ const getClientProducts = asyncHandler(async (req, res) => {
     if (!clientId) throw new ApiError(400, 'clientId is required');
     monoIdIsValid(clientId);
 
-    const clientProductDoc = await clientProduct.findOne({ clientId })
-        .populate('products.productId', 'productName productDescription productImages');
+    const clientProductDocs = await clientProduct.find({ clientId })
+        .populate('products.productId', 'productName productDescription productImages')
+        .sort({ createdAt: -1 });
 
-    // If we wanted to keep the old shape where each item is returned in an array
-    const products = clientProductDoc ? clientProductDoc.products.map(p => ({
-        _id: clientProductDoc._id, // Share the same wrapper ID
-        productId: p.productId,
-        quantity: p.quantity,
-        createdAt: clientProductDoc.createdAt,
-        updatedAt: clientProductDoc.updatedAt
-    })) : [];
+    // Generate a flat list of products with their specific purchase dates
+    const allProducts = [];
+    clientProductDocs.forEach(doc => {
+        if (!doc.products) return;
+        doc.products.forEach(p => {
+            // Use sub-item timestamp if available (from bug-merged docs), else parent doc createdAt
+            let pDate = doc.createdAt;
+            if (p._id) {
+                try {
+                    // Safe conversion for lean string IDs
+                    pDate = new mongoose.Types.ObjectId(String(p._id)).getTimestamp();
+                } catch (e) {
+                    pDate = doc.createdAt;
+                }
+            }
 
-    return res.status(200).json(new ApiResponse(200, products, 'Client products fetched successfully'));
+            allProducts.push({
+                productId: p.productId?._id || p.productId,
+                quantity: p.quantity,
+                details: p.productId, // Populated object from .populate()
+                purchasedAt: pDate,
+                createdAt: doc.createdAt,
+                id: p._id || String(Math.random())
+            });
+        });
+    });
+
+    const products = allProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.status(200).json(new ApiResponse(200, products, 'Products fetched successfully'));
 });
 
 export {
