@@ -75,8 +75,8 @@ const loginUser = asyncHandler(
 
         const options = {
             httpOnly: true,
-            secure: true, // Always true for cross-site cookies
-            sameSite: 'none' // Required for cross-site cookie sending
+            secure: true, 
+            sameSite: 'lax'
         }
         res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(new ApiResponse(200, { user: loggedInUser, accessToken, refreshToken }, "User logged in successfully"))
     }
