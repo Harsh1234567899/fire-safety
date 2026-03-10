@@ -5,6 +5,7 @@ import { errorHandler } from "./middlewares/errorHandler.middlewares.js";
 
 
 const app = express()
+app.set("trust proxy", 1);
 
 import helmet from "helmet";
 import rateLimit from 'express-rate-limit';

@@ -24,7 +24,7 @@ const sendWhatsappReminder = asyncHandler(async (req, res) => {
 
     // Simulate sending if API is not fully configured (User requested placeholder future functionality)
     if (!apiUrl) {
-        console.log(`[WhatsApp Simulated] To: ${phoneNumbers.join(', ')} | Message: ${message}`);
+        
         return res.status(200).json(new ApiResponse(200, {
             simulated: true,
             messageSent: message,
