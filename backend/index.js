@@ -16,5 +16,6 @@ connectDB().then(() => {
     })
 }).catch((error) => {
     console.log('catch block db connect app.js ', error);
-
 })
+
+export default app;
