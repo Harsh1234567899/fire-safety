@@ -24,7 +24,7 @@ app.use('/api', globalLimiter);
 app.use(helmet()); // Set standard security headers
 
 app.use(cors({
-  origin: [...(process.env.CORS_ORIGIN?.split(',') || []), 'https://fire-safety-itqf.vercel.app'],
+  origin: process.env.CORS_ORIGIN.split(','),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
