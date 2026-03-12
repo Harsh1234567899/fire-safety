@@ -75,8 +75,9 @@ const loginUser = asyncHandler(
 
         const options = {
             httpOnly: true,
-            secure: true, 
-            sameSite: 'lax'
+            secure: (process.env.VERCEL || process.env.COOKIE_DOMAIN) ? true : false, 
+            sameSite: 'lax',
+            ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
         }
         res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(new ApiResponse(200, { user: loggedInUser, accessToken, refreshToken }, "User logged in successfully"))
     }
@@ -195,8 +196,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none'
+            secure: (process.env.VERCEL || process.env.COOKIE_DOMAIN) ? true : false,
+            sameSite: 'lax', // Unified with login options
+            ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
         }
 
         const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id)

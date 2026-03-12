@@ -4,9 +4,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Cartes
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-gray-800 text-white text-xs p-2 rounded shadow-lg">
-                <p className="font-semibold">{label}</p>
-                <p>{`Count: ${payload[0].value}`}</p>
+            <div className="bg-gray-800 text-white text-[10px] px-2 py-1 rounded shadow-lg font-bold uppercase tracking-wider">
+                {label}
             </div>
         );
     }

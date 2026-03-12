@@ -1,6 +1,17 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-lg font-bold uppercase tracking-wider">
+                {label}
+            </div>
+        );
+    }
+    return null;
+};
+
 const RegionalDensityChart = ({ data = [] }) => {
     return (
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm h-full">
@@ -29,8 +40,7 @@ const RegionalDensityChart = ({ data = [] }) => {
                         />
                         <Tooltip
                             cursor={{ fill: '#f8fafc' }}
-                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#1e293b', borderRadius: '6px', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
+                            content={<CustomTooltip />}
                         />
                         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                             {data.map((entry, index) => (

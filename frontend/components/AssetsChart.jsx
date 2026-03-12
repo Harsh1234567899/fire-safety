@@ -1,6 +1,17 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
+const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-lg font-bold uppercase tracking-wider">
+                {payload[0].name}
+            </div>
+        );
+    }
+    return null;
+};
+
 const AssetsChart = ({ data }) => {
     return (
         <div className="h-64 w-full flex items-center justify-center">
@@ -18,10 +29,7 @@ const AssetsChart = ({ data }) => {
                             <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                     </Pie>
-                    <Tooltip
-                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#1e293b', borderRadius: '6px', color: '#fff', fontSize: '12px' }}
-                        itemStyle={{ color: '#fff' }}
-                    />
+                    <Tooltip content={<CustomTooltip />} />
                 </PieChart>
             </ResponsiveContainer>
 

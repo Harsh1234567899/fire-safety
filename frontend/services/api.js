@@ -4,7 +4,8 @@ import { logout } from "../store/slices/authSlice";
 import { dataCache } from "../utils/dataCache";
 
 const apiClient = axios.create({
-  baseURL: "",
+  baseURL:  "",
+  // baseURL: import.meta.env.VITE_API_BASE_URL || "",
   withCredentials: true,
 });
 
