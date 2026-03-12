@@ -51,8 +51,17 @@ const updateAmcVisitById = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, updatedVisit, "AMC Visit updated successfully"));
 
 })
+
+const deleteAmcVisitById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    monoIdIsValid(id)
+    const Visit = await amcVisit.findByIdAndDelete(id);
+    if (!Visit) throw new ApiError(404, 'AMC Visit not found');
+    return res.status(200).json(new ApiResponse(200, Visit, 'AMC Visit deleted successfully'));
+})
 export {
     updateAmcVisitById,
-    createAmcVisit
+    createAmcVisit,
+    deleteAmcVisitById
 }
 

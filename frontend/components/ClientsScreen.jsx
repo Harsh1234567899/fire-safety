@@ -9,12 +9,17 @@ import {
 import CertificateTemplate from './CertificateTemplate';
 import { createRoot } from 'react-dom/client';
 import { toast } from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 
-import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClients, importClientsLocal, deleteClientLocal, updateClient } from '../store/slices/clientSlice';
-import { downloadClientDirectory, getAllClients } from '../services/client.js';
+import { downloadClientDirectory, getAllClients, deleteClient } from '../services/client.js';
+import { deleteAmc } from '../services/amc.js';
+import { deleteAmcVisit } from '../services/amcVisit.js';
+import { deleteFireNoc } from '../services/fireNoc.js';
+import { deleteCylinder as deleteGasCylinder } from '../services/fireExtinguisher.js';
+import { deleteClientProducts } from '../services/clientProduct.js';
 import { dataCache } from '../utils/dataCache';
 
 const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
@@ -213,16 +218,126 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
 
     const handleDeleteClient = (e, id) => {
         e.stopPropagation();
-        // Custom toast with confirmation could go here, but keeping confirm for safety as requested "remove alert" usually implies "replace alert with toast", but confirm is functional. 
-        // We will keep confirm for now but add toast after.
-        if (window.confirm('Are you sure you want to permanently remove this firm from the directory?')) {
-            try {
-                dispatch(deleteClientLocal(id));
-                toast.success("Client removed from local view.");
-            } catch (error) {
-                toast.error("Failed to remove client.");
+
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <Trash2 className="text-orange-500" size={18} />
+                    <span className="font-bold text-sm">Hide client</span>
+                </div>
+                <p className="text-xs text-gray-600">Are you sure you want to remove this client from your local view? (This won't delete data from server)</p>
+                <div className="flex justify-end gap-2 mt-2">
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors uppercase tracking-widest">Cancel</button>
+                    <button 
+                        onClick={() => {
+                            toast.dismiss(t.id);
+                            dispatch(deleteClientLocal(id));
+                            toast.success("Client removed from local view.");
+                        }}
+                        className="px-3 py-1 text-xs font-bold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors uppercase tracking-widest shadow-md"
+                    >
+                        Hide
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000, style: { borderRadius: '15px', padding: '12px', border: '1px solid #ffedd5' } });
+    };
+
+    const handleDeleteClientPermanent = async () => {
+        if (!selectedClient) return;
+
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <AlertCircle className="text-red-500" size={20} />
+                    <span className="font-bold text-sm">Permanent Deletion</span>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                    Are you sure you want to permanently delete <strong>{selectedClient.firmName}</strong>? 
+                    This will remove all associated records. This action cannot be undone.
+                </p>
+                <div className="flex items-center justify-end gap-2 mt-2">
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:bg-gray-100 rounded-lg transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                                setIsSaving(true);
+                                await deleteClient(selectedClient._id);
+                                toast.success("Client and all data deleted successfully!");
+                                dispatch(deleteClientLocal(selectedClient._id));
+                                setSelectedClient(null);
+                                setSelectedLedgerIds([]);
+                            } catch (error) {
+                                console.error(error);
+                                toast.error(error.response?.data?.message || "Failed to delete client permanently");
+                            } finally {
+                                setIsSaving(false);
+                            }
+                        }}
+                        className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-red-600 text-white rounded-lg shadow-lg shadow-red-500/20 hover:bg-red-700 transition-all"
+                    >
+                        Confirm Delete
+                    </button>
+                </div>
+            </div>
+        ), {
+            duration: 6000,
+            position: 'top-center',
+            style: {
+                borderRadius: '20px',
+                background: '#fff',
+                color: '#333',
+                padding: '16px',
+                border: '1px solid #fee2e2',
+                maxWidth: '400px',
+                boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)'
             }
-        }
+        });
+    };
+
+    const handleDeleteLedgerItem = async (e, item) => {
+        e.stopPropagation();
+        
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <Trash2 className="text-red-500" size={18} />
+                    <span className="font-bold text-sm">Delete {item.type} Record</span>
+                </div>
+                <p className="text-xs text-gray-600">Are you sure you want to delete this {item.type.toLowerCase()} record?</p>
+                <div className="flex justify-end gap-2 mt-2">
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors uppercase tracking-widest">Cancel</button>
+                    <button 
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                                const id = item._id || item.id;
+                                if (item.type === 'CYLINDERS') await deleteGasCylinder(id);
+                                else if (item.type === 'NOC') await deleteFireNoc(id);
+                                else if (item.type === 'AMC') await deleteAmc(id);
+                                else if (item.type === 'AMC_VISIT') await deleteAmcVisit(id);
+                                else if (item.type === 'PRODUCTS') await deleteClientProducts(selectedClient._id);
+
+                                toast.success(`${item.type} record deleted successfully`);
+                                handleViewClient(selectedClient);
+                            } catch (error) {
+                                console.error(error);
+                                toast.error(error.response?.data?.message || "Failed to delete record");
+                            }
+                        }}
+                        className="px-3 py-1 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors uppercase tracking-widest shadow-md"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000, style: { borderRadius: '15px', padding: '12px', border: '1px solid #fee2e2' } });
     };
 
     const handleEditClient = (e, client) => {
@@ -469,6 +584,15 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                             {isDownloading === 'ALL' ? 'Generating...' : 'View Certificate'}
                         </button>
                         <button onClick={(e) => handleEditClient(e, selectedClient)} className="flex items-center justify-center gap-2 bg-white border border-gray-200 px-4 md:px-5 py-2.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase text-gray-700 hover:border-red-200 hover:bg-red-50 transition-all tracking-widest flex-1 sm:flex-none"><Edit2 size={14} />Edit Profile</button>
+                        {(userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'manager') && (
+                            <button
+                                onClick={handleDeleteClientPermanent}
+                                disabled={isSaving}
+                                className="flex items-center justify-center gap-2 bg-red-50 border border-red-100 px-4 md:px-5 py-2.5 rounded-xl font-bold text-[10px] sm:text-xs uppercase text-red-600 hover:bg-red-600 hover:text-white transition-all tracking-widest flex-1 sm:flex-none active:scale-95 disabled:opacity-50"
+                            >
+                                <Trash2 size={14} /> Delete Client
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -510,10 +634,10 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                     <div
                                         key={idx}
                                         onClick={() => handleViewServiceDetails(item._id || item.id)}
-                                        className={`p-6 bg-gray-50 rounded-3xl border border-transparent transition-all group hover:border-blue-100 hover:bg-blue-50/30 cursor-pointer relative`}
+                                        className={`p-6 bg-gray-50 rounded-3xl border border-transparent transition-all group hover:border-blue-100 hover:bg-blue-50/30 cursor-pointer relative flex items-center gap-4`}
                                     >
                                         <div
-                                            className="absolute top-6 right-6 z-10"
+                                            className="z-10"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 const id = item._id || item.id;
@@ -524,7 +648,8 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                                 {selectedLedgerIds.includes(item._id || item.id) && <Check size={14} />}
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between mb-4 pr-8">
+
+                                        <div className="flex-1 flex items-center justify-between">
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'CYLINDERS' ? 'bg-orange-50 text-orange-500' :
                                                     item.type === 'NOC' ? 'bg-blue-50 text-blue-500' :
@@ -544,6 +669,14 @@ const ClientsScreen = ({ onRegisterNew, onImportClients }) => {
                                                     )}
                                                 </div>
                                             </div>
+
+                                            <button
+                                                onClick={(e) => handleDeleteLedgerItem(e, item)}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                title="Delete Record"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </div>
                                 )) : (

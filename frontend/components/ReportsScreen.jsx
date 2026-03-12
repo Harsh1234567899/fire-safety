@@ -1,14 +1,17 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { BarChart3, Download, FileText, Search, Calendar, Box, ExternalLink, X, RefreshCw, ShieldCheck, AlertCircle, Filter } from 'lucide-react';
+import { BarChart3, Download, FileText, Search, Calendar, Box, ExternalLink, X, RefreshCw, ShieldCheck, AlertCircle, Filter, Trash2 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchClients } from '../store/slices/clientSlice';
 import CustomDropdown from './CustomDropdown.jsx';
 import ServiceDetailsModal from './ServiceDetailsModal.jsx';
 import { downloadCylinderReport } from '../services/fireExtinguisher.js';
 import { downloadNOCReport } from '../services/fireNoc.js';
-import { downloadAMCReport } from '../services/amc.js';
+import { downloadAMCReport, deleteAmc } from '../services/amc.js';
 import { downloadAllServicesReport } from '../services/allService.js';
+import { deleteFireNoc } from '../services/fireNoc.js';
+import { deleteCylinder } from '../services/fireExtinguisher.js';
 import { dataCache } from '../utils/dataCache';
+import { toast } from 'react-hot-toast';
 
 const ReportsScreen = () => {
     const dispatch = useDispatch();
@@ -114,6 +117,43 @@ const ReportsScreen = () => {
     const handleViewDetails = (item) => {
         setSelectedServiceId(item.id);
         setIsModalOpen(true);
+    };
+
+    const handleDeleteRecord = async (e, item) => {
+        e.stopPropagation();
+
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <Trash2 className="text-red-500" size={18} />
+                    <span className="font-bold text-sm">Delete {item.assetType} Record</span>
+                </div>
+                <p className="text-xs text-gray-600">Are you sure you want to delete this {item.assetType.toLowerCase()} record?</p>
+                <div className="flex justify-end gap-2 mt-2">
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors uppercase tracking-widest">Cancel</button>
+                    <button 
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                                if (item.assetType === 'Fire Extinguisher') await deleteCylinder(item.id);
+                                else if (item.assetType === 'NOC') await deleteFireNoc(item.id);
+                                else if (item.assetType === 'AMC') await deleteAmc(item.id);
+
+                                toast.success(`${item.assetType} record deleted successfully`);
+                                // Refresh data
+                                dispatch(fetchClients({ query: '', page: 1, limit: 200, lite: false }));
+                            } catch (error) {
+                                console.error(error);
+                                toast.error(error.response?.data?.message || "Failed to delete record");
+                            }
+                        }}
+                        className="px-3 py-1 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors uppercase tracking-widest shadow-md"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000, style: { borderRadius: '15px', padding: '12px', border: '1px solid #fee2e2' } });
     };
 
     // Date Validation Effect
@@ -368,7 +408,7 @@ const ReportsScreen = () => {
                             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</div>
                             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Renewal</div>
                             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</div>
-                            <div className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Action</div>
+                            <div className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Actions</div>
                         </div>
 
                         {/* Table Body */}
@@ -430,12 +470,20 @@ const ReportsScreen = () => {
                                     </div>
 
                                     {/* Action */}
-                                    <div className="text-right">
+                                    <div className="text-right flex items-center justify-end gap-1">
                                         <button
                                             onClick={() => handleViewDetails(item)}
                                             className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="View Details"
                                         >
                                             <ExternalLink size={16} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDeleteRecord(e, item)}
+                                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete Record"
+                                        >
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>

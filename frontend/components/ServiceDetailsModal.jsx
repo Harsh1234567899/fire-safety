@@ -40,23 +40,18 @@ const ServiceDetailsModal = ({ isOpen, onClose, serviceId, initialData }) => {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-        });
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('en-GB').replace(/\//g, '-'); // DD-MM-YYYY
     };
 
     const formatDateTime = (dateStr) => {
         if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleString('en-GB', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const date = d.toLocaleDateString('en-GB').replace(/\//g, '-');
+        const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return `${date} ${time}`;
     };
 
     const isCylinder = service?.model === 'FIRE_EXTINGUISHER' || service?.assetType === 'Cylinder';

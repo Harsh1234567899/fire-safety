@@ -28,12 +28,9 @@ const INITIAL_SEQUENCE = {
 // Helper to format YYYY-MM-DD to DD/MM/YYYY for summary/certificate
 const formatDateDisplay = (dateStr) => {
     if (!dateStr) return 'N/A';
-    if (dateStr.includes('/')) return dateStr; // Already formatted
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return dateStr;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-GB').replace(/\//g, '-');
 };
 
 

@@ -9,3 +9,5 @@ export const createClientProducts = async (payload) => {
 export const getClientProducts = async (clientId) => {
     return await apiClient.get(`/api/v17/client-product/client/${clientId}`);
 };
+
+export const deleteClientProducts = (clientId) => apiClient.delete(`/api/v17/client-product/client/${clientId}`);

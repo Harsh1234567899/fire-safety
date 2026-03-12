@@ -9,6 +9,7 @@ import { AMC } from '../models/AMC.model.js'
 import { amcVisit } from '../models/AMCvisit.model.js'
 import { clientProduct } from '../models/clientProduct.model.js'
 import { monoIdIsValid } from '../utils/mongoDBid.js'
+import { Document } from '../models/Document.model.js'
 import mongoose from 'mongoose'
 import ExcelJS from 'exceljs'
 
@@ -182,8 +183,6 @@ const updateClient = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, updatedClient, "Client updated successfully"));
 });
-
-
 
 const getAllClients = asyncHandler(
     async (req, res) => {
@@ -468,11 +467,78 @@ const downloadClientDirectory = asyncHandler(async (req, res) => {
     }
 });
 
+const deleteClient = asyncHandler(
+    async (req, res) => {
+        const { id } = req.params;
+        if (!id) {
+            throw new ApiError(400, "Client id is required");
+        }
+        monoIdIsValid(id);
+
+        // 1. Authorization Check (Admin or Manager only)
+        if (req.user.role !== "admin" && req.user.role !== "manager") {
+            throw new ApiError(403, "You are not allowed to delete clients");
+        }
+
+        const clientToDelete = await client.findById(id);
+        if (!clientToDelete) {
+            throw new ApiError(404, "Client not found");
+        }
+
+        // 2. Find all related services to clean up documents
+        const [cylinders, nocs, amcs, visits, products] = await Promise.all([
+            gasSilinder.find({ clientId: id }).select("_id"),
+            fireNOC.find({ clientId: id }).select("_id"),
+            AMC.find({ clientId: id }).select("_id"),
+            amcVisit.find({ clientId: id }).select("_id"),
+            clientProduct.find({ clientId: id }).select("_id")
+        ]);
+
+        const serviceIds = [
+            ...cylinders.map(c => c._id),
+            ...nocs.map(n => n._id),
+            ...amcs.map(a => a._id),
+            ...visits.map(v => v._id),
+            ...products.map(p => p._id),
+            clientToDelete._id
+        ];
+
+        // 3. Clean up documents (from DB and Cloudinary)
+        const documents = await Document.find({ referenceId: { $in: serviceIds } });
+
+        if (documents.length > 0) {
+            for (const doc of documents) {
+                try {
+                    await deleteOnCloudinary(doc.url);
+                } catch (err) {
+                    console.error(`Failed to delete file from Cloudinary: ${doc.url}`, err);
+                }
+            }
+            await Document.deleteMany({ referenceId: { $in: serviceIds } });
+        }
+
+        // 4. Cascade delete all service records
+        await Promise.all([
+            clientProduct.deleteMany({ clientId: id }),
+            gasSilinder.deleteMany({ clientId: id }),
+            AMC.deleteMany({ clientId: id }),
+            amcVisit.deleteMany({ clientId: id }),
+            fireNOC.deleteMany({ clientId: id })
+        ]);
+
+        // 5. Delete the client record
+        await clientToDelete.deleteOne();
+
+        return res.status(200).json(new ApiResponse(200, {}, "Client and all associated data deleted successfully"));
+    }
+)
+
 export {
     createClient,
     updateClient,
     validateCreateClient,
     validateUpdateClient,
     getAllClients,
-    downloadClientDirectory
+    downloadClientDirectory,
+    deleteClient
 }

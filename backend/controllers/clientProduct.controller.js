@@ -80,7 +80,18 @@ const getClientProducts = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, products, 'Products fetched successfully'));
 });
 
+const deleteClientProducts = asyncHandler(async (req, res) => {
+    const { clientId } = req.params;
+    if (!clientId) throw new ApiError(400, 'clientId is required');
+    monoIdIsValid(clientId);
+    const clientProductDocs = await clientProduct.find({ clientId });
+    if (!clientProductDocs) throw new ApiError(404, 'Client products not found');
+    await clientProductDocs.forEach(doc => doc.remove());
+    return res.status(200).json(new ApiResponse(200, 'Client products deleted successfully'));
+});
+
 export {
     createClientProducts,
-    getClientProducts
+    getClientProducts,
+    deleteClientProducts
 }

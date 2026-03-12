@@ -675,10 +675,20 @@ const createFireNOCRefilling = asyncHandler(
         })
     }
 )
+
+const deleteFireNoc = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id) throw new ApiError(400, 'id is required');
+    monoIdIsValid(id);
+    const fireNoc = await fireNOC.findByIdAndDelete(id);
+    if (!fireNoc) throw new ApiError(404, 'FireNOC not found');
+    return res.status(200).json(new ApiResponse(200, 'FireNOC deleted successfully'));
+})
 export {
     createFireNOCRefilling,
     createFireNoc,
     getFireNoce,
     updateFireNoc,
-    exportFireNOCsXlsx
+    exportFireNOCsXlsx,
+    deleteFireNoc
 }

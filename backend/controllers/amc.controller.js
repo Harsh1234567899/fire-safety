@@ -867,11 +867,20 @@ const parseUtcDateRange = (startDate, endDate) => {
     return { $lte: end };
 };
 
+const deleteAmcById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    monoIdIsValid(id)
+    const amc = await AMC.findByIdAndDelete(id);
+    if (!amc) throw new ApiError(404, 'AMC not found');
+    return res.status(200).json(new ApiResponse(200, amc, 'AMC deleted successfully'));
+})
+
 export {
     getAMCs,
     exportAMCsXlsx,
     createAmcValidation,
     createAmc,
     createRefillingAmc,
-    updateAmcById
+    updateAmcById,
+    deleteAmcById
 }

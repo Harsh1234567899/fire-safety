@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authorize, verifyJWT } from "../middlewares/auth.middleware.js";
-import { createFireNoc, createFireNOCRefilling, exportFireNOCsXlsx, getFireNoce, updateFireNoc } from "../controllers/fireNOC.controller.js";
+import { createFireNoc, createFireNOCRefilling, deleteFireNoc, exportFireNOCsXlsx, getFireNoce, updateFireNoc } from "../controllers/fireNOC.controller.js";
 
 const router = Router()
 
@@ -8,7 +8,7 @@ router.get('/', verifyJWT, authorize('admin', 'manager', 'godown-manager'), getF
 router.post('/create', verifyJWT, authorize('admin', 'manager', 'godown-manager'), createFireNoc)
 router.post('/refill', verifyJWT, authorize('admin', 'manager', 'godown-manager'), createFireNOCRefilling)
 router.put('/update/:id', verifyJWT, authorize('admin', 'manager', 'godown-manager'), updateFireNoc)
-
+router.delete('/:id', verifyJWT, authorize('admin', 'manager', 'godown-manager'), deleteFireNoc)
 router.post('/download', verifyJWT, authorize('admin', 'manager'), exportFireNOCsXlsx)
 
 export default router

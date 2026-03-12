@@ -30,9 +30,9 @@ const toDateInput = (iso) => {
 };
 const formatDate = (d) => {
     if (!d) return 'N/A';
-    if (d.includes('/')) return d;
-    const p = d.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
+    return date.toLocaleDateString('en-GB').replace(/\//g, '-');
 };
 
 const INITIAL_SEQUENCE = { 'CO2': 1024, 'ABC Powder': 512, 'Clean Agent': 128, DEFAULT: 100 };
